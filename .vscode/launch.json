@@ -1,0 +1,87 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: FastAPI Debug (My Code Only)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "app.main:app",
+        "--reload",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "DATABASE_URL": "postgresql://postgres:password@localhost:5432/myapp",
+        "PYTHONPATH": "${workspaceFolder}/backend"
+      },
+      "justMyCode": true,
+      "stopOnEntry": false,
+      "subProcess": false,
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/backend",
+          "remoteRoot": "."
+        }
+      ]
+    },
+    {
+      "name": "Python: FastAPI Debug (All Code)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "app.main:app",
+        "--reload",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "DATABASE_URL": "postgresql://postgres:password@localhost:5432/myapp",
+        "PYTHONPATH": "${workspaceFolder}/backend"
+      },
+      "justMyCode": false,
+      "stopOnEntry": false,
+      "subProcess": false
+    },
+    {
+      "name": "Vue.js: Debug",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--host", "127.0.0.1"],
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "Full Stack Debug",
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Program",
+      "skipFiles": ["<node_internals>/**"],
+      "preLaunchTask": "Start Backend",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Launch Full Stack",
+      "configurations": ["Python: FastAPI Debug", "Vue.js: Debug"],
+      "stopAll": true
+    }
+  ]
+}
