@@ -48,7 +48,7 @@ backend/
 ### 函數命名
 
 - 使用 snake_case：`get_user_by_id`, `create_new_user`
-- 異步函數加 `async` 前綴或使用動詞：`async def fetch_users()`
+- 異步函數使用 `async def` 關鍵字，並遵循 `snake_case` 命名：`async def fetch_users()`
 
 ### 變數命名
 

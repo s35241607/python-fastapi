@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: FastAPI Debug (My Code Only)",
+      "name": "Python: FastAPI Simple Debug",
       "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
@@ -16,25 +16,38 @@
       ],
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "justMyCode": true,
+      "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe"
+    },
+    {
+      "name": "Python: FastAPI Debug (My Code Only)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/.venv/Scripts/uvicorn.exe",
+      "args": [
+        "app.main:app",
+        "--reload",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/backend/.env",
       "env": {
-        "DATABASE_URL": "postgresql://postgres:password@localhost:5432/myapp",
         "PYTHONPATH": "${workspaceFolder}/backend"
       },
       "justMyCode": true,
       "stopOnEntry": false,
-      "subProcess": false,
-      "pathMappings": [
-        {
-          "localRoot": "${workspaceFolder}/backend",
-          "remoteRoot": "."
-        }
-      ]
+      "subProcess": false
     },
     {
       "name": "Python: FastAPI Debug (All Code)",
       "type": "debugpy",
       "request": "launch",
-      "module": "uvicorn",
+      "program": "${workspaceFolder}/backend/.venv/Scripts/uvicorn.exe",
       "args": [
         "app.main:app",
         "--reload",
@@ -45,8 +58,8 @@
       ],
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/backend/.env",
       "env": {
-        "DATABASE_URL": "postgresql://postgres:password@localhost:5432/myapp",
         "PYTHONPATH": "${workspaceFolder}/backend"
       },
       "justMyCode": false,
@@ -69,7 +82,6 @@
       "name": "Full Stack Debug",
       "type": "node",
       "request": "launch",
-      "name": "Launch Program",
       "skipFiles": ["<node_internals>/**"],
       "preLaunchTask": "Start Backend",
       "cwd": "${workspaceFolder}/frontend",
@@ -80,7 +92,10 @@
   "compounds": [
     {
       "name": "Launch Full Stack",
-      "configurations": ["Python: FastAPI Debug", "Vue.js: Debug"],
+      "configurations": [
+        "Python: FastAPI Debug (My Code Only)",
+        "Vue.js: Debug"
+      ],
       "stopAll": true
     }
   ]
