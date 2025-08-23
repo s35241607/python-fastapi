@@ -1,23 +1,29 @@
-# 全端開發專案
+# Python-FastAPI Full-Stack Project
 
 現代化的前後端分離架構專案，使用最新的技術棧構建。
+
+> **📋 Complete Documentation Available**
+> - **[📖 Project Documentation](docs/PROJECT_DOCUMENTATION.md)** - Comprehensive project overview
+> - **[🛠️ Development Guidelines](docs/DEVELOPMENT_GUIDELINES.md)** - Coding standards and workflows
+> - **[🚀 Usage Guide](docs/USAGE_GUIDE.md)** - Step-by-step usage instructions
+> - **[⚙️ Environment Setup](docs/ENVIRONMENT_SETUP.md)** - Version verification and setup guide
 
 ## 🏗️ 技術棧
 
 ### 前端
 
-- **框架**: Vue 3 + TypeScript
-- **構建工具**: Vite
-- **狀態管理**: Pinia
-- **HTTP 客戶端**: Axios
-- **路由**: Vue Router
+- **框架**: Vue 3.5+ + TypeScript 5.7+
+- **構建工具**: Vite 7.1+
+- **狀態管理**: Pinia 2.2+
+- **HTTP 客戶端**: Axios 1.7+
+- **路由**: Vue Router 4.4+
 
 ### 後端
 
-- **框架**: FastAPI + Python 3.11+
+- **框架**: FastAPI + Python 3.13+
 - **ORM**: SQLAlchemy (異步)
 - **資料庫**: PostgreSQL 16
-- **套件管理**: uv
+- **套件管理**: uv 0.4+
 - **API 文檔**: Swagger/OpenAPI
 
 ### 開發工具
@@ -49,11 +55,12 @@ project/
 
 ### 前置需求
 
-- **Node.js** 18+ (前端)
-- **Python** 3.11+ (後端)
-- **PostgreSQL** 12+ (資料庫)
-- **uv** (Python 套件管理)
+- **Node.js** 22+ (前端開發)
+- **Python** 3.13+ (後端開發)
+- **PostgreSQL** 16+ (資料庫)
+- **uv** 0.4+ (Python 套件管理)
 - **VS Code** (推薦 IDE)
+- **Docker** 24+ (可選，容器化開發)
 
 ### 🔧 開發環境設定
 
@@ -117,16 +124,20 @@ docker-compose down
 | API 文檔 | http://localhost:8000/docs | -                     | Swagger UI (僅開發環境) |
 | 資料庫   | localhost:5432             | -                     | PostgreSQL              |
 
-## 📚 詳細文檔
+## 📚 完整文檔
 
-### 開發指南
+### 🚀 快速入門文檔
+- **[📖 Project Documentation](docs/PROJECT_DOCUMENTATION.md)** - 完整專案文檔，包含架構圖和系統概覽
+- **[🚀 Usage Guide](docs/USAGE_GUIDE.md)** - 詳細使用說明，包含所有操作步驟
+- **[⚙️ Environment Setup](docs/ENVIRONMENT_SETUP.md)** - 環境設定和版本驗證指南
 
+### 🛠️ 開發文檔
+- **[🛠️ Development Guidelines](docs/DEVELOPMENT_GUIDELINES.md)** - 開發守則、編碼規範和工作流程
 - **[前端開發指南](frontend/README.md)** - Vue.js 前端開發詳細說明
 - **[後端開發指南](backend/README.md)** - FastAPI 後端開發詳細說明
 - **[調試指南](DEBUG_GUIDE.md)** - VS Code 調試配置說明
 
-### 技術規範
-
+### 📋 技術規範
 - **[API 規範](docs/api-standards.md)** - RESTful API 設計規範
 - **[程式碼規範](docs/code-style.md)** - 程式碼風格指南
 - **[資料庫規範](docs/database-standards.md)** - 資料庫設計規範
@@ -170,7 +181,25 @@ docker-compose down
 1. **後端部署** - 參考 [backend/README.md](backend/README.md#生產環境部署)
 2. **前端部署** - 參考 [frontend/README.md](frontend/README.md#部署)
 
-## 🆘 常見問題
+## ⚡ 版本更新說明
+
+本專案已更新至最新穩定版本：
+
+### ✅ 已完成更新
+- **Python**: 升級至 3.13+ (工具配置已同步更新)
+- **PostgreSQL**: 確認使用 16 版本 ✓
+- **Node.js**: 升級至 20+ (建議使用 LTS 版本)
+- **Vue.js**: 升級至 3.4+
+- **Vite**: 升級至 5.0+
+- **TypeScript**: 升級至 5.3+
+- **其他前端依賴**: 全面升級至最新穩定版本
+
+### 🔧 配置更新
+- `backend/pyproject.toml`: Python 3.13 工具配置已更新
+- `frontend/package.json`: 所有依賴包已升級至最新版本
+- `docker-compose.yml`: PostgreSQL 16 配置確認正確
+
+詳細的版本驗證和升級指南請參考 **[⚙️ Environment Setup](docs/ENVIRONMENT_SETUP.md)**
 
 ### 環境問題
 
