@@ -1,0 +1,166 @@
+# Load Testing Configuration
+# Enterprise Ticket Management System Performance Benchmarks
+
+[DEFAULT]
+# Base configuration
+host = http://localhost:8000
+results_directory = ./load_test_results
+
+# Enterprise Performance Benchmarks
+response_time_threshold_ms = 2000
+throughput_threshold_rps = 100
+error_rate_threshold_percent = 1.0
+concurrent_users_target = 1000
+
+[scenarios]
+# Test scenario definitions
+
+[[scenarios.enterprise_normal]]
+name = "Enterprise Normal Load"
+description = "Simulates normal business hours load"
+users = 500
+spawn_rate = 10
+duration = 300
+expected_rps = 150
+expected_response_time = 800
+
+[[scenarios.enterprise_peak]]
+name = "Enterprise Peak Load" 
+description = "Simulates peak business hours with 1000+ concurrent users"
+users = 1000
+spawn_rate = 20
+duration = 600
+expected_rps = 200
+expected_response_time = 1200
+
+[[scenarios.enterprise_stress]]
+name = "Enterprise Stress Test"
+description = "Tests system breaking point beyond normal capacity"
+users = 1500
+spawn_rate = 25
+duration = 300
+expected_rps = 180
+expected_response_time = 2000
+
+[[scenarios.enterprise_spike]]
+name = "Enterprise Spike Test"
+description = "Tests rapid user influx scenarios"
+users = 2000
+spawn_rate = 100
+duration = 180
+expected_rps = 150
+expected_response_time = 3000
+
+[[scenarios.enterprise_endurance]]
+name = "Enterprise Endurance Test"
+description = "Tests sustained load over extended period"
+users = 800
+spawn_rate = 10
+duration = 1800
+expected_rps = 180
+expected_response_time = 1000
+
+[performance_targets]
+# Enterprise-grade performance targets
+
+# Response time targets (milliseconds)
+excellent_response_time = 500
+good_response_time = 1000
+acceptable_response_time = 2000
+poor_response_time = 5000
+
+# Throughput targets (requests per second)
+excellent_throughput = 200
+good_throughput = 150
+acceptable_throughput = 100
+poor_throughput = 50
+
+# Reliability targets (error rate percentage)
+excellent_error_rate = 0.1
+good_error_rate = 0.5
+acceptable_error_rate = 1.0
+poor_error_rate = 5.0
+
+[user_behavior]
+# Realistic user behavior patterns
+
+# Task weights (higher = more common)
+dashboard_view_weight = 20
+ticket_list_weight = 15
+ticket_create_weight = 10
+ticket_detail_weight = 8
+ticket_update_weight = 6
+comment_add_weight = 5
+search_weight = 4
+approvals_weight = 3
+reports_weight = 2
+file_upload_weight = 1
+
+# User role distribution
+regular_user_percentage = 70
+manager_percentage = 25
+admin_percentage = 5
+
+# Wait times between actions (seconds)
+min_wait_time = 1
+max_wait_time = 5
+admin_min_wait = 2
+admin_max_wait = 8
+
+[database]
+# Database performance expectations
+connection_pool_size = 20
+max_overflow = 30
+query_timeout = 30
+connection_timeout = 10
+
+[monitoring]
+# Performance monitoring settings
+enable_real_time_monitoring = true
+monitor_cpu_usage = true
+monitor_memory_usage = true
+monitor_database_connections = true
+monitor_response_times = true
+
+# Alert thresholds
+cpu_usage_alert = 80
+memory_usage_alert = 85
+database_connection_alert = 90
+response_time_alert = 3000
+
+[reporting]
+# Report generation settings
+generate_html_reports = true
+generate_json_reports = true
+generate_csv_exports = true
+include_charts = true
+include_recommendations = true
+
+# Report detail levels
+include_endpoint_breakdown = true
+include_error_analysis = true
+include_performance_trends = true
+include_user_simulation_stats = true
+
+[enterprise_requirements]
+# Specific requirements for enterprise deployment
+
+# Scalability requirements
+min_concurrent_users = 1000
+target_concurrent_users = 1500
+max_concurrent_users = 2000
+
+# Performance requirements
+max_page_load_time = 3000
+max_api_response_time = 2000
+min_availability_percent = 99.9
+
+# Security requirements
+enable_authentication_testing = true
+test_rate_limiting = true
+test_input_validation = true
+
+# Integration requirements
+test_email_notifications = false  # Disabled for load tests
+test_teams_integration = false   # Disabled for load tests
+test_slack_integration = false   # Disabled for load tests

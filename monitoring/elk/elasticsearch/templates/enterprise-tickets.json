@@ -1,0 +1,209 @@
+{
+  "index_patterns": ["enterprise-tickets-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 2,
+      "number_of_replicas": 1,
+      "index.refresh_interval": "30s",
+      "index.mapping.total_fields.limit": 2000,
+      "analysis": {
+        "analyzer": {
+          "ticket_analyzer": {
+            "tokenizer": "standard",
+            "filter": ["lowercase", "stop"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "timestamp": {
+          "type": "date"
+        },
+        "level": {
+          "type": "keyword"
+        },
+        "severity": {
+          "type": "keyword"
+        },
+        "message": {
+          "type": "text",
+          "analyzer": "ticket_analyzer",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "application": {
+          "type": "keyword"
+        },
+        "environment": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "host": {
+          "type": "keyword"
+        },
+        "path": {
+          "type": "keyword"
+        },
+        "tags": {
+          "type": "keyword"
+        },
+        "request_id": {
+          "type": "keyword"
+        },
+        "user_id": {
+          "type": "keyword"
+        },
+        "clientip": {
+          "type": "ip"
+        },
+        "response": {
+          "type": "integer"
+        },
+        "bytes": {
+          "type": "long"
+        },
+        "response_time": {
+          "type": "float"
+        },
+        "query_duration": {
+          "type": "float"
+        },
+        "container_id": {
+          "type": "keyword"
+        },
+        "pid": {
+          "type": "integer"
+        },
+        "tid": {
+          "type": "integer"
+        },
+        "connection_id": {
+          "type": "integer"
+        },
+        "geoip": {
+          "properties": {
+            "continent_name": {
+              "type": "keyword"
+            },
+            "country_name": {
+              "type": "keyword"
+            },
+            "country_code2": {
+              "type": "keyword"
+            },
+            "country_code3": {
+              "type": "keyword"
+            },
+            "region_name": {
+              "type": "keyword"
+            },
+            "region_code": {
+              "type": "keyword"
+            },
+            "city_name": {
+              "type": "keyword"
+            },
+            "postal_code": {
+              "type": "keyword"
+            },
+            "latitude": {
+              "type": "float"
+            },
+            "longitude": {
+              "type": "float"
+            },
+            "location": {
+              "type": "geo_point"
+            },
+            "timezone": {
+              "type": "keyword"
+            }
+          }
+        },
+        "ticket": {
+          "properties": {
+            "id": {
+              "type": "keyword"
+            },
+            "number": {
+              "type": "keyword"
+            },
+            "title": {
+              "type": "text",
+              "analyzer": "ticket_analyzer"
+            },
+            "status": {
+              "type": "keyword"
+            },
+            "priority": {
+              "type": "keyword"
+            },
+            "department": {
+              "type": "keyword"
+            },
+            "created_by": {
+              "type": "keyword"
+            },
+            "assigned_to": {
+              "type": "keyword"
+            }
+          }
+        },
+        "approval": {
+          "properties": {
+            "id": {
+              "type": "keyword"
+            },
+            "workflow_id": {
+              "type": "keyword"
+            },
+            "action": {
+              "type": "keyword"
+            },
+            "approver": {
+              "type": "keyword"
+            },
+            "decision": {
+              "type": "keyword"
+            }
+          }
+        },
+        "performance": {
+          "properties": {
+            "cpu_usage": {
+              "type": "float"
+            },
+            "memory_usage": {
+              "type": "float"
+            },
+            "disk_usage": {
+              "type": "float"
+            },
+            "active_connections": {
+              "type": "integer"
+            },
+            "request_rate": {
+              "type": "float"
+            }
+          }
+        }
+      }
+    }
+  },
+  "version": 1,
+  "_meta": {
+    "description": "Template for Enterprise Ticket Management System logs",
+    "created_by": "Enterprise IT Team",
+    "creation_date": "2023-12-01"
+  }
+}

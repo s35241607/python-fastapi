@@ -1,0 +1,179 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Enterprise Ticket Management System - Overview",
+    "tags": ["enterprise", "tickets", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Overview",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=\"fastapi-backend\"}",
+            "legendFormat": "Backend Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "rate(fastapi_requests_total[5m])",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "yAxes": [
+          {"label": "Requests/sec", "min": 0}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Response Time (95th Percentile)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(fastapi_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          }
+        ],
+        "yAxes": [
+          {"label": "Seconds", "min": 0}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "rate(fastapi_requests_total{status=~\"5..\"}[5m]) / rate(fastapi_requests_total[5m]) * 100",
+            "legendFormat": "Error Rate %"
+          }
+        ],
+        "yAxes": [
+          {"label": "Percentage", "min": 0}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Database Connections",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends",
+            "legendFormat": "Active Connections"
+          }
+        ],
+        "yAxes": [
+          {"label": "Connections", "min": 0}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Top API Endpoints by Request Count",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "topk(10, sum by (path, method) (rate(fastapi_requests_total[1h])))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true},
+              "renameByName": {
+                "path": "Endpoint",
+                "method": "Method",
+                "Value": "Requests/hour"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Business Metrics",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 28}
+      },
+      {
+        "id": 8,
+        "title": "Tickets Created (Last 24h)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 29},
+        "targets": [
+          {
+            "expr": "increase(fastapi_requests_total{method=\"POST\", path=\"/tickets/\", status=~\"2..\"}[24h])",
+            "legendFormat": "New Tickets"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Pending Approvals",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 29},
+        "targets": [
+          {
+            "expr": "increase(fastapi_requests_total{path=\"/approvals/pending\"}[1h])",
+            "legendFormat": "Pending Approvals"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "File Uploads (Success Rate)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 29},
+        "targets": [
+          {
+            "expr": "rate(fastapi_requests_total{method=\"POST\", path=~\"/attachments/.*\", status=~\"2..\"}[1h]) / rate(fastapi_requests_total{method=\"POST\", path=~\"/attachments/.*\"}[1h]) * 100",
+            "legendFormat": "Success Rate %"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Active Users (Last Hour)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 29},
+        "targets": [
+          {
+            "expr": "count(count by (user_id) (rate(fastapi_requests_total[1h])))",
+            "legendFormat": "Active Users"
+          }
+        ]
+      }
+    ]
+  }
+}

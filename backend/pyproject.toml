@@ -16,6 +16,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "fastapi-cors>=0.0.6",
     "pydantic-settings>=2.10.1",
+    "aiofiles>=24.1.0",
 ]
 
 [dependency-groups]
