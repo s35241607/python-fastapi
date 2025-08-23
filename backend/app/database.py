@@ -2,20 +2,20 @@
 資料庫連接模組 - 異步版本
 """
 
-from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
-                                    create_async_engine)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 
 from app.core.config import settings
 
 # 創建異步引擎
+pool_settings = settings.db_pool_settings
 engine = create_async_engine(
     settings.DATABASE_URL,
-    pool_size=settings.DB_POOL_SIZE,
-    max_overflow=settings.DB_MAX_OVERFLOW,
+    pool_size=pool_settings["pool_size"],
+    max_overflow=pool_settings["max_overflow"],
     pool_pre_ping=True,
-    pool_recycle=settings.DB_POOL_RECYCLE,
-    echo=settings.DEBUG,
+    pool_recycle=pool_settings["pool_recycle"],
+    echo=settings.DB_ECHO,
 )
 
 # 創建異步會話工廠
