@@ -22,11 +22,13 @@ services:
       dockerfile: Dockerfile
     container_name: fastapi_backend
     environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/myapp
+      DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/myapp
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./backend/app:/app/app
+      - ./backend/tests:/app/tests
+      - ./backend/.env:/app/.env
     depends_on:
       - postgres
     networks:

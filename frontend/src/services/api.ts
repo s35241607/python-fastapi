@@ -1,4 +1,5 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
+import axios from 'axios'
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 
@@ -33,7 +34,7 @@ export interface ApiError {
 // API Client Class
 class ApiClient {
   private client: AxiosInstance
-  private refreshPromise: Promise<string> | null = null
+  private refreshPromise: Promise<string | null> | null = null
 
   constructor() {
     this.client = axios.create({
@@ -52,8 +53,8 @@ class ApiClient {
     this.client.interceptors.request.use(
       (config) => {
         const authStore = useAuthStore()
-        if (authStore.token) {
-          config.headers.Authorization = `Bearer ${authStore.token}`
+        if (authStore.accessToken) {
+          config.headers.Authorization = `Bearer ${authStore.accessToken}`
         }
         return config
       },
@@ -76,7 +77,7 @@ class ApiClient {
 
           try {
             const authStore = useAuthStore()
-            
+
             // Try to refresh token
             if (authStore.refreshToken && !this.refreshPromise) {
               this.refreshPromise = this.refreshAuthToken()
@@ -114,8 +115,8 @@ class ApiClient {
       })
 
       const { access_token, refresh_token } = response.data
-      authStore.setTokens(access_token, refresh_token)
-      
+      authStore.setTokens(access_token, refresh_token, 3600) // Default 1 hour expiry
+
       return access_token
     } catch (error) {
       console.error('Token refresh failed:', error)
@@ -218,6 +219,9 @@ class ApiClient {
 
 // Create singleton instance
 export const apiClient = new ApiClient()
+
+// Export as apiService for compatibility
+export const apiService = apiClient
 
 // Export default instance
 export default apiClient
