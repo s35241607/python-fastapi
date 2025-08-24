@@ -319,7 +319,7 @@ export class FileUploadService {
     const abortController = new AbortController()
     this.abortControllers.set(uploadProgress.fileId, abortController)
 
-    const result = await apiClient.upload('/attachments/upload', formData, (progress) => {
+    const result = await apiClient.upload('/api/v1/attachments/upload', formData, (progress) => {
       uploadProgress.progress = progress
       uploadProgress.uploadedBytes = Math.round((progress / 100) * uploadProgress.totalBytes)
       
@@ -358,7 +358,7 @@ export class FileUploadService {
     uploadProgress.status = 'uploading'
 
     // Initialize upload session
-    const initResponse = await apiClient.post('/attachments/upload/init', {
+    const initResponse = await apiClient.post('/api/v1/attachments/upload/init', {
       filename: uploadProgress.file.name,
       file_size: uploadProgress.file.size,
       content_type: uploadProgress.file.type,
@@ -403,7 +403,7 @@ export class FileUploadService {
       }
 
       // Complete upload
-      const result = await apiClient.post(`/attachments/upload/${upload_id}/complete`)
+      const result = await apiClient.post(`/api/v1/attachments/upload/${upload_id}/complete`)
 
       uploadProgress.status = 'completed'
       uploadProgress.progress = 100
@@ -420,7 +420,7 @@ export class FileUploadService {
     } catch (error: any) {
       // Cleanup failed upload
       try {
-        await apiClient.delete(`/attachments/upload/${upload_id}`)
+        await apiClient.delete(`/api/v1/attachments/upload/${upload_id}`)
       } catch (cleanupError) {
         console.warn('Failed to cleanup upload session:', cleanupError)
       }
@@ -443,7 +443,7 @@ export class FileUploadService {
     let retries = 0
     while (retries <= this.config.maxRetries) {
       try {
-        return await apiClient.post(`/attachments/upload/${uploadId}/chunk`, formData, {
+        return await apiClient.post(`/api/v1/attachments/upload/${uploadId}/chunk`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
       } catch (error: any) {

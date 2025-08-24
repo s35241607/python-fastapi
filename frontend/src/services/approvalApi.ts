@@ -181,7 +181,7 @@ export class ApprovalApiService {
     if (params.priority) queryParams.append('priority', params.priority)
     if (params.overdue_only) queryParams.append('overdue_only', 'true')
 
-    return apiClient.get(`/approvals/my-pending?${queryParams.toString()}`)
+    return apiClient.get(`/api/v1/approvals/pending?${queryParams.toString()}`)
   }
 
   // Get approval history
@@ -196,12 +196,12 @@ export class ApprovalApiService {
     if (params.date_from) queryParams.append('date_from', params.date_from)
     if (params.date_to) queryParams.append('date_to', params.date_to)
 
-    return apiClient.get(`/approvals/history?${queryParams.toString()}`)
+    return apiClient.get(`/api/v1/approvals/workflows?${queryParams.toString()}`)
   }
 
   // Get single approval workflow
   async getApprovalWorkflow(id: number): Promise<ApprovalWorkflow> {
-    return apiClient.get(`/approvals/${id}`)
+    return apiClient.get(`/api/v1/approvals/workflows/${id}`)
   }
 
   // Process approval action
@@ -221,7 +221,7 @@ export class ApprovalApiService {
       })
     }
 
-    return apiClient.post(`/approvals/${approvalId}/process`, formData, {
+    return apiClient.post(`/api/v1/approvals/steps/${approvalId}/process`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
   }
@@ -241,7 +241,7 @@ export class ApprovalApiService {
 
   // Delegate approval
   async delegateApproval(request: DelegationRequest): Promise<ApprovalStep> {
-    return apiClient.post(`/approvals/${request.approval_id}/delegate`, {
+    return apiClient.post(`/api/v1/approvals/steps/${request.approval_id}/delegate`, {
       delegated_to_id: request.delegated_to_id,
       reason: request.reason,
       temporary: request.temporary,

@@ -1,584 +1,504 @@
 <template>
-  <div class="ticket-form">
-    <div class="form-header">
-      <div class="header-content">
-        <div class="breadcrumb">
-          <router-link to="/tickets">Tickets</router-link>
-          <span>/</span>
-          <span>{{ isEditMode ? 'Edit Ticket' : 'Create Ticket' }}</span>
-        </div>
-        <h1 class="page-title">{{ isEditMode ? 'Edit Ticket' : 'Create New Ticket' }}</h1>
-        <p v-if="isEditMode" class="page-subtitle">Ticket #{{ ticketData.ticket_number }}</p>
+  <div>
+    <!-- Page Header -->
+    <div class="d-flex justify-space-between align-center mb-6">
+      <div>
+        <h1 class="text-h4 font-weight-light">
+          {{ isEditing ? 'Edit Ticket' : 'Create New Ticket' }}
+        </h1>
+        <p class="text-subtitle-1 text-medium-emphasis">
+          {{ isEditing ? `Editing ticket #${ticketNumber}` : 'Fill out the form below to create a new support ticket' }}
+        </p>
       </div>
+      <v-btn
+        variant="outlined"
+        prepend-icon="mdi-arrow-left"
+        @click="goBack"
+      >
+        Back
+      </v-btn>
     </div>
 
-    <form @submit.prevent="submitForm" class="ticket-form-container">
-      <div class="form-body">
-        <!-- Left Column - Main Form -->
-        <div class="left-column">
-          <!-- Basic Information -->
-          <div class="form-section">
-            <h3 class="section-title">Basic Information</h3>
-            
-            <div class="form-group">
-              <label for="title" class="form-label required">Title</label>
-              <input
-                id="title"
-                v-model="form.title"
-                type="text"
-                class="form-input"
-                :class="{ error: errors.title }"
-                placeholder="Enter ticket title"
-                required
+    <v-form ref="formRef" v-model="isValid" @submit.prevent="onSubmit">
+      <v-row>
+        <!-- Main Form -->
+        <v-col cols="12" md="8">
+          <v-card>
+            <v-card-title class="d-flex align-center">
+              <v-icon class="me-2">mdi-ticket</v-icon>
+              Ticket Information
+            </v-card-title>
+            <v-card-text>
+              <v-row>
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="form.title"
+                    label="Title *"
+                    :rules="titleRules"
+                    variant="outlined"
+                    placeholder="Brief description of the issue"
+                    counter="100"
+                  />
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-select
+                    v-model="form.priority"
+                    :items="priorityOptions"
+                    label="Priority *"
+                    :rules="requiredRules"
+                    variant="outlined"
+                  >
+                    <template v-slot:selection="{ item }">
+                      <v-chip :color="getPriorityColor(item.value)" size="small">
+                        {{ item.title }}
+                      </v-chip>
+                    </template>
+                    <template v-slot:item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        <template v-slot:prepend>
+                          <v-chip :color="getPriorityColor(item.value)" size="small">
+                            {{ item.title }}
+                          </v-chip>
+                        </template>
+                      </v-list-item>
+                    </template>
+                  </v-select>
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-select
+                    v-model="form.ticketType"
+                    :items="ticketTypeOptions"
+                    label="Ticket Type *"
+                    :rules="requiredRules"
+                    variant="outlined"
+                  />
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-select
+                    v-model="form.department"
+                    :items="departmentOptions"
+                    label="Department"
+                    variant="outlined"
+                    clearable
+                  />
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-select
+                    v-model="form.assignee"
+                    :items="assigneeOptions"
+                    label="Assign to"
+                    variant="outlined"
+                    clearable
+                  />
+                </v-col>
+
+                <v-col cols="12">
+                  <v-textarea
+                    v-model="form.description"
+                    label="Description *"
+                    :rules="descriptionRules"
+                    variant="outlined"
+                    rows="4"
+                    placeholder="Detailed description of the issue, including steps to reproduce, expected vs actual behavior, etc."
+                    counter="1000"
+                  />
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model="form.dueDate"
+                    label="Due Date"
+                    type="date"
+                    variant="outlined"
+                  />
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model="form.estimatedHours"
+                    label="Estimated Hours"
+                    type="number"
+                    variant="outlined"
+                    min="0"
+                    step="0.5"
+                  />
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+
+          <!-- Custom Fields -->
+          <v-card class="mt-4" v-if="customFields.length > 0">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="me-2">mdi-form-textbox</v-icon>
+              Additional Information
+            </v-card-title>
+            <v-card-text>
+              <v-row>
+                <v-col
+                  v-for="field in customFields"
+                  :key="field.name"
+                  cols="12"
+                  :md="field.type === 'textarea' ? 12 : 6"
+                >
+                  <v-text-field
+                    v-if="field.type === 'text'"
+                    v-model="form.customFields[field.name]"
+                    :label="field.label"
+                    :required="field.required"
+                    variant="outlined"
+                  />
+                  <v-textarea
+                    v-else-if="field.type === 'textarea'"
+                    v-model="form.customFields[field.name]"
+                    :label="field.label"
+                    :required="field.required"
+                    variant="outlined"
+                    rows="3"
+                  />
+                  <v-select
+                    v-else-if="field.type === 'select'"
+                    v-model="form.customFields[field.name]"
+                    :items="field.options"
+                    :label="field.label"
+                    :required="field.required"
+                    variant="outlined"
+                  />
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+        </v-col>
+
+        <!-- Sidebar -->
+        <v-col cols="12" md="4">
+          <!-- Options -->
+          <v-card>
+            <v-card-title class="d-flex align-center">
+              <v-icon class="me-2">mdi-cog</v-icon>
+              Options
+            </v-card-title>
+            <v-card-text>
+              <v-switch
+                v-model="form.isUrgent"
+                label="Mark as Urgent"
+                color="error"
+                hide-details
+                class="mb-3"
               />
-              <span v-if="errors.title" class="error-message">{{ errors.title }}</span>
-            </div>
 
-            <div class="form-group">
-              <label for="description" class="form-label required">Description</label>
-              <textarea
-                id="description"
-                v-model="form.description"
-                class="form-textarea"
-                :class="{ error: errors.description }"
-                placeholder="Describe the issue or request in detail"
-                rows="6"
-                required
-              ></textarea>
-              <span v-if="errors.description" class="error-message">{{ errors.description }}</span>
-            </div>
+              <v-switch
+                v-model="form.notifyAssignee"
+                label="Notify Assignee"
+                color="primary"
+                hide-details
+                class="mb-3"
+              />
 
-            <div class="form-row">
-              <div class="form-group">
-                <label for="type" class="form-label required">Type</label>
-                <select
-                  id="type"
-                  v-model="form.type"
-                  class="form-select"
-                  :class="{ error: errors.type }"
-                  required
-                >
-                  <option value="">Select type</option>
-                  <option value="incident">Incident</option>
-                  <option value="request">Request</option>
-                  <option value="change">Change</option>
-                  <option value="problem">Problem</option>
-                </select>
-                <span v-if="errors.type" class="error-message">{{ errors.type }}</span>
-              </div>
-
-              <div class="form-group">
-                <label for="priority" class="form-label required">Priority</label>
-                <select
-                  id="priority"
-                  v-model="form.priority"
-                  class="form-select"
-                  :class="{ error: errors.priority }"
-                  required
-                >
-                  <option value="">Select priority</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
-                <span v-if="errors.priority" class="error-message">{{ errors.priority }}</span>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="department" class="form-label required">Department</label>
-                <select
-                  id="department"
-                  v-model="form.department_id"
-                  class="form-select"
-                  :class="{ error: errors.department_id }"
-                  required
-                >
-                  <option value="">Select department</option>
-                  <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-                    {{ dept.name }}
-                  </option>
-                </select>
-                <span v-if="errors.department_id" class="error-message">{{ errors.department_id }}</span>
-              </div>
-
-              <div class="form-group">
-                <label for="assigned_to" class="form-label">Assigned To</label>
-                <select
-                  id="assigned_to"
-                  v-model="form.assigned_to_id"
-                  class="form-select"
-                  :class="{ error: errors.assigned_to_id }"
-                >
-                  <option value="">Unassigned</option>
-                  <option v-for="user in assignableUsers" :key="user.id" :value="user.id">
-                    {{ user.first_name }} {{ user.last_name }} ({{ user.role }})
-                  </option>
-                </select>
-                <span v-if="errors.assigned_to_id" class="error-message">{{ errors.assigned_to_id }}</span>
-              </div>
-            </div>
-
-            <div v-if="isEditMode" class="form-group">
-              <label for="status" class="form-label">Status</label>
-              <select
-                id="status"
-                v-model="form.status"
-                class="form-select"
-                :class="{ error: errors.status }"
-              >
-                <option value="open">Open</option>
-                <option value="in_progress">In Progress</option>
-                <option value="pending_approval">Pending Approval</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </select>
-              <span v-if="errors.status" class="error-message">{{ errors.status }}</span>
-            </div>
-          </div>
+              <v-switch
+                v-model="form.isPublic"
+                label="Visible to Requester"
+                color="primary"
+                hide-details
+              />
+            </v-card-text>
+          </v-card>
 
           <!-- File Attachments -->
-          <div class="form-section">
-            <h3 class="section-title">Attachments</h3>
-            
-            <div class="file-upload-area">
-              <div
-                class="upload-zone"
-                :class="{ dragover: isDragOver }"
-                @drop="onFileDrop"
-                @dragover.prevent
-                @dragenter="isDragOver = true"
-                @dragleave="isDragOver = false"
-                @click="$refs.fileInput.click()"
+          <v-card class="mt-4">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="me-2">mdi-paperclip</v-icon>
+              Attachments
+            </v-card-title>
+            <v-card-text>
+              <v-file-input
+                v-model="files"
+                label="Upload files"
+                multiple
+                variant="outlined"
+                prepend-icon="mdi-paperclip"
+                accept="image/*,application/pdf,.doc,.docx,.txt,.zip"
+                @change="handleFileUpload"
               >
-                <i class="icon-upload"></i>
-                <p class="upload-text">
-                  Drag and drop files here or <span class="upload-link">browse</span>
-                </p>
-                <p class="upload-hint">
-                  Supported: PDF, DOC, XLS, JPG, PNG, ZIP (Max 25MB each)
-                </p>
-                <input
-                  ref="fileInput"
-                  type="file"
-                  multiple
-                  @change="onFileSelect"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.gif,.bmp,.zip,.rar,.7z"
-                  style="display: none"
-                />
+                <template v-slot:selection="{ fileNames }">
+                  <template v-for="fileName in fileNames" :key="fileName">
+                    <v-chip
+                      size="small"
+                      color="primary"
+                      class="me-2 mb-2"
+                    >
+                      {{ fileName }}
+                    </v-chip>
+                  </template>
+                </template>
+              </v-file-input>
+
+              <div class="text-caption text-medium-emphasis">
+                Supported formats: Images, PDF, DOC, TXT, ZIP (Max 10MB each)
               </div>
 
-              <div v-if="uploadFiles.length" class="file-list">
-                <div v-for="(file, index) in uploadFiles" :key="index" class="file-item">
-                  <div class="file-info">
-                    <i :class="getFileIcon(file.type)"></i>
-                    <div class="file-details">
-                      <span class="file-name">{{ file.name }}</span>
-                      <span class="file-size">{{ formatFileSize(file.size) }}</span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    @click="removeFile(index)"
-                    class="remove-file-btn"
-                  >
-                    <i class="icon-x"></i>
-                  </button>
-                </div>
+              <!-- Existing Attachments (for edit mode) -->
+              <div v-if="existingAttachments.length > 0" class="mt-3">
+                <div class="text-subtitle-2 mb-2">Current Attachments:</div>
+                <v-chip
+                  v-for="attachment in existingAttachments"
+                  :key="attachment.id"
+                  size="small"
+                  closable
+                  class="me-2 mb-2"
+                  @click:close="removeAttachment(attachment.id)"
+                >
+                  {{ attachment.filename }}
+                </v-chip>
               </div>
-            </div>
-          </div>
+            </v-card-text>
+          </v-card>
 
-          <!-- Additional Information -->
-          <div class="form-section">
-            <h3 class="section-title">Additional Information</h3>
-            
-            <div class="form-group">
-              <label for="tags" class="form-label">Tags</label>
-              <input
-                id="tags"
+          <!-- Tags -->
+          <v-card class="mt-4">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="me-2">mdi-tag-multiple</v-icon>
+              Tags
+            </v-card-title>
+            <v-card-text>
+              <v-combobox
                 v-model="form.tags"
-                type="text"
-                class="form-input"
-                placeholder="Enter tags separated by commas (e.g., urgent, hardware, network)"
+                :items="availableTags"
+                label="Add tags"
+                variant="outlined"
+                multiple
+                chips
+                closable-chips
               />
-              <span class="form-hint">Tags help categorize and search for tickets</span>
-            </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
 
-            <div class="form-group">
-              <label for="due_date" class="form-label">Due Date</label>
-              <input
-                id="due_date"
-                v-model="form.due_date"
-                type="datetime-local"
-                class="form-input"
-                :class="{ error: errors.due_date }"
-              />
-              <span v-if="errors.due_date" class="error-message">{{ errors.due_date }}</span>
-            </div>
-
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input
-                  type="checkbox"
-                  v-model="form.requires_approval"
-                  class="form-checkbox"
-                />
-                <span class="checkbox-text">This ticket requires approval</span>
-              </label>
-              <span class="form-hint">Check this if the ticket needs managerial approval</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right Column - Preview and Actions -->
-        <div class="right-column">
-          <!-- Form Actions -->
-          <div class="form-actions-card">
-            <h3 class="card-title">Actions</h3>
-            
-            <div class="action-buttons">
-              <button
-                type="submit"
-                :disabled="submitting || !isFormValid"
-                class="btn btn-primary btn-block"
-              >
-                <i v-if="submitting" class="spinner-sm"></i>
-                <i v-else class="icon-save"></i>
-                {{ submitting ? 'Saving...' : (isEditMode ? 'Update Ticket' : 'Create Ticket') }}
-              </button>
-
-              <button
-                type="button"
-                @click="saveDraft"
-                :disabled="submitting"
-                class="btn btn-outline btn-block"
-              >
-                <i class="icon-file"></i>
-                Save as Draft
-              </button>
-
-              <router-link
-                :to="isEditMode ? `/tickets/${ticketId}` : '/tickets'"
-                class="btn btn-outline btn-block"
-              >
-                <i class="icon-x"></i>
-                Cancel
-              </router-link>
-            </div>
-          </div>
-
-          <!-- Preview Card -->
-          <div class="preview-card">
-            <h3 class="card-title">Preview</h3>
-            
-            <div class="preview-content">
-              <div class="preview-item">
-                <label>Title:</label>
-                <span>{{ form.title || 'No title' }}</span>
-              </div>
-              
-              <div class="preview-item">
-                <label>Type:</label>
-                <span class="ticket-type" :class="`type-${form.type}`">
-                  {{ formatType(form.type) || 'No type selected' }}
-                </span>
-              </div>
-              
-              <div class="preview-item">
-                <label>Priority:</label>
-                <span class="priority-badge" :class="`priority-${form.priority}`">
-                  {{ form.priority || 'No priority' }}
-                </span>
-              </div>
-              
-              <div class="preview-item">
-                <label>Department:</label>
-                <span>{{ getDepartmentName(form.department_id) || 'No department' }}</span>
-              </div>
-              
-              <div class="preview-item">
-                <label>Assigned To:</label>
-                <span>{{ getAssigneeName(form.assigned_to_id) || 'Unassigned' }}</span>
-              </div>
-              
-              <div v-if="form.due_date" class="preview-item">
-                <label>Due Date:</label>
-                <span>{{ formatDate(form.due_date) }}</span>
-              </div>
-              
-              <div v-if="uploadFiles.length" class="preview-item">
-                <label>Attachments:</label>
-                <span>{{ uploadFiles.length }} file(s) selected</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Validation Summary -->
-          <div v-if="hasErrors" class="validation-card">
-            <h3 class="card-title">
-              <i class="icon-alert-triangle"></i>
-              Please fix the following errors:
-            </h3>
-            <ul class="error-list">
-              <li v-for="(error, field) in errors" :key="field">
-                {{ error }}
-              </li>
-            </ul>
-          </div>
-        </div>
+      <!-- Action Buttons -->
+      <div class="d-flex justify-end align-center mt-6">
+        <v-btn
+          variant="outlined"
+          class="me-3"
+          @click="saveDraft"
+          :loading="saving"
+        >
+          Save as Draft
+        </v-btn>
+        <v-btn
+          color="primary"
+          type="submit"
+          :loading="submitting"
+          :disabled="!isValid"
+        >
+          {{ isEditing ? 'Update Ticket' : 'Create Ticket' }}
+        </v-btn>
       </div>
-    </form>
+    </v-form>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useTicketStore } from '@/stores/ticket'
-import { useAuthStore } from '@/stores/auth'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 
-const route = useRoute()
 const router = useRouter()
-const ticketStore = useTicketStore()
-const authStore = useAuthStore()
+const route = useRoute()
 
-// Reactive data
+// Props
+const props = defineProps<{
+  id?: string
+}>()
+
+// Form state
+const formRef = ref()
+const isValid = ref(false)
 const submitting = ref(false)
-const isDragOver = ref(false)
-const uploadFiles = ref([])
-const departments = ref([])
-const assignableUsers = ref([])
-const ticketData = ref(null)
+const saving = ref(false)
+const files = ref([])
 
-const form = ref({
+const isEditing = computed(() => !!props.id)
+const ticketNumber = computed(() => props.id ? `T-2024-${props.id.padStart(3, '0')}` : '')
+
+// Form data
+const form = reactive({
   title: '',
   description: '',
-  type: '',
   priority: '',
-  department_id: '',
-  assigned_to_id: '',
-  status: 'open',
-  tags: '',
-  due_date: '',
-  requires_approval: false
+  ticketType: '',
+  department: '',
+  assignee: '',
+  dueDate: '',
+  estimatedHours: '',
+  isUrgent: false,
+  notifyAssignee: true,
+  isPublic: true,
+  tags: [],
+  customFields: {}
 })
 
-const errors = ref({})
+// Options
+const priorityOptions = [
+  { title: 'Critical', value: 'critical' },
+  { title: 'High', value: 'high' },
+  { title: 'Medium', value: 'medium' },
+  { title: 'Low', value: 'low' }
+]
 
-// Computed properties
-const isEditMode = computed(() => route.name === 'TicketEdit')
-const ticketId = computed(() => parseInt(route.params.id as string))
+const ticketTypeOptions = [
+  { title: 'Bug Report', value: 'bug' },
+  { title: 'Feature Request', value: 'feature' },
+  { title: 'Support Request', value: 'support' },
+  { title: 'Hardware Request', value: 'hardware' },
+  { title: 'Access Request', value: 'access' },
+  { title: 'Other', value: 'other' }
+]
 
-const isFormValid = computed(() => {
-  return form.value.title && 
-         form.value.description && 
-         form.value.type && 
-         form.value.priority && 
-         form.value.department_id &&
-         Object.keys(errors.value).length === 0
-})
+const departmentOptions = [
+  { title: 'IT', value: 'it' },
+  { title: 'HR', value: 'hr' },
+  { title: 'Finance', value: 'finance' },
+  { title: 'Operations', value: 'operations' },
+  { title: 'Marketing', value: 'marketing' }
+]
 
-const hasErrors = computed(() => Object.keys(errors.value).length > 0)
+const assigneeOptions = [
+  { title: 'Bob Smith', value: 2 },
+  { title: 'Eve Wilson', value: 5 },
+  { title: 'Grace Lee', value: 7 }
+]
+
+const availableTags = [
+  'urgent', 'login-issue', 'hardware', 'software', 'network', 'security', 'training'
+]
+
+const customFields = ref([
+  {
+    name: 'affectedSystems',
+    label: 'Affected Systems',
+    type: 'text',
+    required: false
+  },
+  {
+    name: 'businessImpact',
+    label: 'Business Impact',
+    type: 'select',
+    options: ['Low', 'Medium', 'High', 'Critical'],
+    required: false
+  }
+])
+
+const existingAttachments = ref([])
+
+// Validation rules
+const titleRules = [
+  (v: string) => !!v || 'Title is required',
+  (v: string) => v.length <= 100 || 'Title must be less than 100 characters'
+]
+
+const descriptionRules = [
+  (v: string) => !!v || 'Description is required',
+  (v: string) => v.length <= 1000 || 'Description must be less than 1000 characters'
+]
+
+const requiredRules = [
+  (v: any) => !!v || 'This field is required'
+]
 
 // Methods
-const loadFormData = async () => {
+const getPriorityColor = (priority: string) => {
+  const colors = {
+    critical: 'priority-critical',
+    high: 'priority-high',
+    medium: 'priority-medium',
+    low: 'priority-low'
+  }
+  return colors[priority] || 'grey'
+}
+
+const handleFileUpload = (event: Event) => {
+  const fileList = (event.target as HTMLInputElement).files
+  if (fileList) {
+    // Handle file validation and preview here
+    console.log('Files uploaded:', fileList)
+  }
+}
+
+const removeAttachment = (attachmentId: number) => {
+  existingAttachments.value = existingAttachments.value.filter(
+    att => att.id !== attachmentId
+  )
+}
+
+const saveDraft = async () => {
+  saving.value = true
   try {
-    // Load departments and users
-    const [deptData, userData] = await Promise.all([
-      ticketStore.fetchDepartments(),
-      ticketStore.fetchAssignableUsers()
-    ])
-    
-    departments.value = deptData
-    assignableUsers.value = userData
-
-    // If editing, load ticket data
-    if (isEditMode.value) {
-      ticketData.value = await ticketStore.fetchTicket(ticketId.value)
-      populateForm(ticketData.value)
-    }
+    // Save as draft logic here
+    console.log('Saving draft:', form)
+    // Show success message
   } catch (error) {
-    console.error('Failed to load form data:', error)
+    console.error('Error saving draft:', error)
+  } finally {
+    saving.value = false
   }
 }
 
-const populateForm = (ticket) => {
-  form.value = {
-    title: ticket.title || '',
-    description: ticket.description || '',
-    type: ticket.type || '',
-    priority: ticket.priority || '',
-    department_id: ticket.department_id || '',
-    assigned_to_id: ticket.assigned_to_id || '',
-    status: ticket.status || 'open',
-    tags: ticket.tags?.join(', ') || '',
-    due_date: ticket.due_date ? formatDateForInput(ticket.due_date) : '',
-    requires_approval: ticket.requires_approval || false
-  }
-}
-
-const validateForm = () => {
-  const newErrors = {}
-
-  if (!form.value.title.trim()) {
-    newErrors.title = 'Title is required'
-  } else if (form.value.title.length < 5) {
-    newErrors.title = 'Title must be at least 5 characters'
-  }
-
-  if (!form.value.description.trim()) {
-    newErrors.description = 'Description is required'
-  } else if (form.value.description.length < 10) {
-    newErrors.description = 'Description must be at least 10 characters'
-  }
-
-  if (!form.value.type) {
-    newErrors.type = 'Type is required'
-  }
-
-  if (!form.value.priority) {
-    newErrors.priority = 'Priority is required'
-  }
-
-  if (!form.value.department_id) {
-    newErrors.department_id = 'Department is required'
-  }
-
-  if (form.value.due_date && new Date(form.value.due_date) <= new Date()) {
-    newErrors.due_date = 'Due date must be in the future'
-  }
-
-  errors.value = newErrors
-  return Object.keys(newErrors).length === 0
-}
-
-const submitForm = async () => {
-  if (!validateForm()) return
+const onSubmit = async () => {
+  if (!isValid.value) return
 
   submitting.value = true
   try {
-    const formData = {
-      ...form.value,
-      tags: form.value.tags ? form.value.tags.split(',').map(tag => tag.trim()) : []
-    }
-
-    let result
-    if (isEditMode.value) {
-      result = await ticketStore.updateTicket(ticketId.value, formData)
+    if (isEditing.value) {
+      // Update existing ticket
+      console.log('Updating ticket:', form)
     } else {
-      result = await ticketStore.createTicket(formData)
+      // Create new ticket
+      console.log('Creating ticket:', form)
     }
-
-    // Upload files if any
-    if (uploadFiles.value.length && result.id) {
-      await ticketStore.uploadAttachments(result.id, uploadFiles.value)
-    }
-
-    // Redirect to ticket detail
-    router.push(`/tickets/${result.id}`)
+    
+    // Navigate to ticket detail or list
+    router.push('/tickets')
   } catch (error) {
-    console.error('Failed to submit form:', error)
-    // Handle validation errors from server
-    if (error.response?.data?.detail) {
-      errors.value = error.response.data.detail
-    }
+    console.error('Error submitting ticket:', error)
   } finally {
     submitting.value = false
   }
 }
 
-const saveDraft = async () => {
-  try {
-    const draftData = { ...form.value, status: 'draft' }
-    await ticketStore.saveDraft(draftData)
-    // Show success message
-  } catch (error) {
-    console.error('Failed to save draft:', error)
+const goBack = () => {
+  router.back()
+}
+
+const loadTicketData = async () => {
+  if (isEditing.value && props.id) {
+    // Load existing ticket data
+    // This would be an API call
+    console.log('Loading ticket:', props.id)
+    
+    // Mock data for demo
+    Object.assign(form, {
+      title: 'Sample Ticket Title',
+      description: 'Sample description for editing',
+      priority: 'high',
+      ticketType: 'bug',
+      department: 'it',
+      assignee: 2
+    })
+    
+    existingAttachments.value = [
+      { id: 1, filename: 'screenshot.png' },
+      { id: 2, filename: 'error-log.txt' }
+    ]
   }
 }
 
-const onFileSelect = (event) => {
-  const files = Array.from(event.target.files)
-  addFiles(files)
-}
-
-const onFileDrop = (event) => {
-  event.preventDefault()
-  isDragOver.value = false
-  const files = Array.from(event.dataTransfer.files)
-  addFiles(files)
-}
-
-const addFiles = (files) => {
-  const maxSize = 25 * 1024 * 1024 // 25MB
-  const validFiles = files.filter(file => {
-    if (file.size > maxSize) {
-      alert(`File ${file.name} is too large. Maximum size is 25MB.`)
-      return false
-    }
-    return true
-  })
-
-  uploadFiles.value = [...uploadFiles.value, ...validFiles]
-}
-
-const removeFile = (index) => {
-  uploadFiles.value.splice(index, 1)
-}
-
-// Utility methods
-const formatType = (type) => {
-  return type ? type.charAt(0).toUpperCase() + type.slice(1) : ''
-}
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleString()
-}
-
-const formatDateForInput = (dateString) => {
-  const date = new Date(dateString)
-  return date.toISOString().slice(0, 16)
-}
-
-const formatFileSize = (bytes) => {
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  if (bytes === 0) return '0 B'
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
-}
-
-const getFileIcon = (type) => {
-  if (type.includes('image')) return 'icon-image'
-  if (type.includes('pdf')) return 'icon-file-text'
-  if (type.includes('video')) return 'icon-video'
-  if (type.includes('word')) return 'icon-file-text'
-  if (type.includes('excel')) return 'icon-file-text'
-  return 'icon-file'
-}
-
-const getDepartmentName = (id) => {
-  const dept = departments.value.find(d => d.id === id)
-  return dept?.name
-}
-
-const getAssigneeName = (id) => {
-  const user = assignableUsers.value.find(u => u.id === id)
-  return user ? `${user.first_name} ${user.last_name}` : null
-}
-
-// Watchers
-watch([form], () => {
-  if (Object.keys(errors.value).length > 0) {
-    validateForm()
-  }
-}, { deep: true })
-
-// Lifecycle hooks
+// Lifecycle
 onMounted(() => {
-  loadFormData()
+  loadTicketData()
 })
 </script>
 

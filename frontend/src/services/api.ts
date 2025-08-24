@@ -3,9 +3,26 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
-const API_TIMEOUT = 30000 // 30 seconds
+// Enhanced API Configuration with Environment Detection
+const getApiBaseUrl = (): string => {
+  const isDevelopment = import.meta.env.DEV
+  const environment = import.meta.env.VITE_ENVIRONMENT
+  const isDocker = environment === 'docker'
+  
+  if (isDevelopment) {
+    // In development, use proxy paths or fallback to localhost
+    return import.meta.env.VITE_API_BASE_URL || ''
+  } else if (isDocker) {
+    // In Docker, use container communication
+    return import.meta.env.VITE_API_BASE_URL || 'http://backend:8000'
+  } else {
+    // Production with custom domain or default
+    return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  }
+}
+
+const API_BASE_URL = getApiBaseUrl()
+const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '30000')
 
 // Request/Response interfaces
 export interface ApiResponse<T = any> {
@@ -46,6 +63,19 @@ class ApiClient {
     })
 
     this.setupInterceptors()
+  }
+
+  // Environment-aware URL building
+  private buildUrl(endpoint: string): string {
+    const isDevelopment = import.meta.env.DEV
+    
+    if (isDevelopment && !API_BASE_URL) {
+      // In development with proxy, use endpoint as-is
+      return endpoint
+    }
+    
+    // For production or when base URL is set, let axios handle it
+    return endpoint
   }
 
   private setupInterceptors(): void {
@@ -110,7 +140,7 @@ class ApiClient {
         throw new Error('No refresh token available')
       }
 
-      const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+      const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
         refresh_token: authStore.refreshToken
       })
 

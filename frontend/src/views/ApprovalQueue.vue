@@ -1,467 +1,461 @@
 <template>
-  <div class="approval-queue">
-    <div class="page-header">
-      <div class="header-content">
-        <h1 class="page-title">Approval Queue</h1>
-        <p class="page-subtitle">Review and process pending approvals</p>
+  <div>
+    <!-- Page Header -->
+    <div class="d-flex justify-space-between align-center mb-6">
+      <div>
+        <h1 class="text-h4 font-weight-light">Approval Queue</h1>
+        <p class="text-subtitle-1 text-medium-emphasis">
+          {{ pendingApprovals.length }} items pending your approval
+        </p>
       </div>
-      <div class="header-actions">
-        <button @click="refreshQueue" :disabled="loading" class="btn btn-outline">
-          <i class="icon-refresh" :class="{ rotating: loading }"></i>
-          Refresh
-        </button>
-        <button @click="bulkApprove" :disabled="!selectedApprovals.length" class="btn btn-success">
-          <i class="icon-check"></i>
-          Bulk Approve ({{ selectedApprovals.length }})
-        </button>
-      </div>
+      <v-btn-toggle v-model="viewMode" mandatory variant="outlined">
+        <v-btn value="list" icon="mdi-format-list-bulleted" />
+        <v-btn value="cards" icon="mdi-grid" />
+      </v-btn-toggle>
     </div>
 
-    <div class="stats-grid">
-      <div class="stat-card urgent">
-        <div class="stat-icon">
-          <i class="icon-alert-triangle"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.urgent || 0 }}</div>
-          <div class="stat-label">Urgent Approvals</div>
-        </div>
-      </div>
+    <!-- Filters -->
+    <v-card class="mb-4">
+      <v-card-text>
+        <v-row>
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="selectedPriority"
+              :items="priorityOptions"
+              label="Priority"
+              variant="outlined"
+              density="compact"
+              multiple
+              chips
+              clearable
+            />
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="selectedType"
+              :items="typeOptions"
+              label="Request Type"
+              variant="outlined"
+              density="compact"
+              multiple
+              chips
+              clearable
+            />
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="selectedDepartment"
+              :items="departmentOptions"
+              label="Department"
+              variant="outlined"
+              density="compact"
+              clearable
+            />
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="sortBy"
+              :items="sortOptions"
+              label="Sort by"
+              variant="outlined"
+              density="compact"
+            />
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
 
-      <div class="stat-card pending">
-        <div class="stat-icon">
-          <i class="icon-clock"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.pending || 0 }}</div>
-          <div class="stat-label">Pending</div>
-        </div>
-      </div>
-
-      <div class="stat-card overdue">
-        <div class="stat-icon">
-          <i class="icon-alert-circle"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.overdue || 0 }}</div>
-          <div class="stat-label">Overdue</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="filters-section">
-      <div class="filter-controls">
-        <select v-model="filters.priority" @change="applyFilters" class="filter-select">
-          <option value="">All Priorities</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-
-        <select v-model="filters.department" @change="applyFilters" class="filter-select">
-          <option value="">All Departments</option>
-          <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-            {{ dept.name }}
-          </option>
-        </select>
-
-        <button v-if="hasActiveFilters" @click="clearFilters" class="btn btn-outline btn-sm">
-          Clear Filters
-        </button>
-      </div>
-    </div>
-
-    <div class="queue-container">
-      <div v-if="loading" class="loading-state">
-        <div class="spinner"></div>
-        <p>Loading approvals...</p>
-      </div>
-
-      <div v-else-if="approvals.length === 0" class="empty-state">
-        <i class="icon-check-circle"></i>
-        <h3>No pending approvals</h3>
-        <p>All caught up! No approvals waiting for your review.</p>
-      </div>
-
-      <div v-else class="approvals-list">
-        <div class="bulk-header">
-          <label class="bulk-checkbox">
-            <input type="checkbox" :checked="selectedApprovals.length === approvals.length" @change="toggleSelectAll">
-            <span>Select All</span>
-          </label>
-          <span class="selection-info">{{ selectedApprovals.length }} of {{ approvals.length }} selected</span>
-        </div>
-
-        <div v-for="approval in approvals" :key="approval.id" class="approval-item" :class="{ urgent: isUrgent(approval), overdue: isOverdue(approval), selected: selectedApprovals.includes(approval.id) }">
-          <div class="approval-checkbox">
-            <input type="checkbox" :value="approval.id" v-model="selectedApprovals">
-          </div>
-
-          <div class="approval-content" @click="viewTicket(approval.ticket_id)">
-            <div class="approval-header">
-              <div class="approval-title">
-                <h4>{{ approval.ticket_title }}</h4>
-                <div class="approval-badges">
-                  <span class="ticket-number">#{{ approval.ticket_number }}</span>
-                  <span class="priority-badge" :class="`priority-${approval.priority}`">{{ approval.priority }}</span>
-                  <span v-if="isUrgent(approval)" class="urgent-badge">Urgent</span>
-                  <span v-if="isOverdue(approval)" class="overdue-badge">Overdue</span>
-                </div>
-              </div>
-              <div class="approval-meta">
-                <span class="requester">{{ approval.requester_name }}</span>
-                <span class="department">{{ approval.department_name }}</span>
-                <span class="request-date">{{ formatTimeAgo(approval.created_at) }}</span>
-              </div>
-            </div>
-
-            <div class="approval-body">
-              <p class="approval-description">{{ truncateText(approval.description, 150) }}</p>
-              
-              <div class="approval-details">
-                <div class="detail-item">
-                  <label>Amount:</label>
-                  <span class="amount" v-if="approval.estimated_cost">${{ formatCurrency(approval.estimated_cost) }}</span>
-                  <span v-else>N/A</span>
-                </div>
-                <div class="detail-item">
-                  <label>Type:</label>
-                  <span class="ticket-type">{{ formatType(approval.ticket_type) }}</span>
-                </div>
-                <div class="detail-item">
-                  <label>Due Date:</label>
-                  <span :class="{ overdue: isOverdue(approval) }">
-                    {{ approval.due_date ? formatDate(approval.due_date) : 'No due date' }}
-                  </span>
-                </div>
-              </div>
+    <!-- List View -->
+    <v-card v-if="viewMode === 'list'">
+      <v-data-table
+        :headers="headers"
+        :items="filteredApprovals"
+        :loading="loading"
+        item-key="id"
+        :sort-by="[{ key: 'dueDate', order: 'asc' }]"
+      >
+        <!-- Ticket Column -->
+        <template v-slot:item.ticket="{ item }">
+          <div>
+            <router-link
+              :to="`/tickets/${item.ticket.id}`"
+              class="text-decoration-none font-weight-medium"
+            >
+              #{{ item.ticket.ticketNumber }} - {{ item.ticket.title }}
+            </router-link>
+            <div class="text-caption text-medium-emphasis">
+              {{ truncateText(item.ticket.description, 60) }}
             </div>
           </div>
+        </template>
 
-          <div class="approval-actions" @click.stop>
-            <button @click="processApproval(approval.id, 'approve')" :disabled="processing.includes(approval.id)" class="action-btn approve-btn">
-              <i class="icon-check"></i>
+        <!-- Priority Column -->
+        <template v-slot:item.priority="{ item }">
+          <v-chip
+            :color="getPriorityColor(item.ticket.priority)"
+            size="small"
+            variant="tonal"
+          >
+            {{ item.ticket.priority }}
+          </v-chip>
+        </template>
+
+        <!-- Requester Column -->
+        <template v-slot:item.requester="{ item }">
+          <div class="d-flex align-center">
+            <v-avatar size="24" class="me-2">
+              <span>{{ getInitials(item.ticket.requester.name) }}</span>
+            </v-avatar>
+            <span>{{ item.ticket.requester.name }}</span>
+          </div>
+        </template>
+
+        <!-- Due Date Column -->
+        <template v-slot:item.dueDate="{ item }">
+          <div>
+            <div :class="{ 'text-error': isOverdue(item.dueDate) }">
+              {{ formatDate(item.dueDate) }}
+            </div>
+            <div class="text-caption text-medium-emphasis">
+              {{ formatRelativeTime(item.dueDate) }}
+            </div>
+          </div>
+        </template>
+
+        <!-- Actions Column -->
+        <template v-slot:item.actions="{ item }">
+          <div class="d-flex gap-1">
+            <v-btn
+              color="success"
+              size="small"
+              variant="tonal"
+              @click="approveItem(item)"
+            >
               Approve
-            </button>
-            
-            <button @click="processApproval(approval.id, 'reject')" :disabled="processing.includes(approval.id)" class="action-btn reject-btn">
-              <i class="icon-x"></i>
+            </v-btn>
+            <v-btn
+              color="error"
+              size="small"
+              variant="outlined"
+              @click="rejectItem(item)"
+            >
               Reject
-            </button>
-            
-            <button @click="requestMoreInfo(approval.id)" :disabled="processing.includes(approval.id)" class="action-btn info-btn">
-              <i class="icon-help-circle"></i>
-              More Info
-            </button>
+            </v-btn>
+            <v-menu>
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  icon="mdi-dots-vertical"
+                  size="small"
+                  variant="text"
+                  v-bind="props"
+                />
+              </template>
+              <v-list>
+                <v-list-item @click="requestMoreInfo(item)">
+                  <v-list-item-title>Request More Info</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="delegateApproval(item)">
+                  <v-list-item-title>Delegate</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </div>
-        </div>
-      </div>
-    </div>
+        </template>
+      </v-data-table>
+    </v-card>
 
-    <!-- Reject Modal -->
-    <div v-if="showRejectModal" class="modal-overlay" @click="showRejectModal = false">
-      <div class="modal" @click.stop>
-        <div class="modal-header">
-          <h3>Reject Approval</h3>
-          <button @click="showRejectModal = false" class="close-btn">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Reason for rejection:</label>
-            <textarea v-model="rejectReason" placeholder="Please provide a reason..." rows="4" class="form-textarea"></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button @click="showRejectModal = false" class="btn btn-outline">Cancel</button>
-          <button @click="confirmReject" :disabled="!rejectReason.trim()" class="btn btn-danger">Reject</button>
-        </div>
-      </div>
-    </div>
+    <!-- Card View -->
+    <v-row v-else>
+      <v-col
+        v-for="approval in filteredApprovals"
+        :key="approval.id"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <ApprovalCard
+          :approval="approval"
+          @approve="approveItem"
+          @reject="rejectItem"
+          @request-info="requestMoreInfo"
+          @delegate="delegateApproval"
+        />
+      </v-col>
+    </v-row>
+
+    <!-- Approval Dialogs -->
+    <ApprovalDialog
+      v-model="showApprovalDialog"
+      :approval="selectedApproval"
+      :action="currentAction"
+      @confirm="handleApprovalAction"
+      @cancel="showApprovalDialog = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useApprovalStore } from '@/stores/approval'
+import ApprovalCard from '../components/Approvals/ApprovalCard.vue'
+import ApprovalDialog from '../components/Approvals/ApprovalDialog.vue'
 
-const router = useRouter()
-const approvalStore = useApprovalStore()
-
+// Reactive data
 const loading = ref(true)
-const processing = ref([])
-const selectedApprovals = ref([])
-const showRejectModal = ref(false)
-const rejectReason = ref('')
-const currentApprovalId = ref(null)
-const departments = ref([])
+const viewMode = ref('list')
+const selectedPriority = ref([])
+const selectedType = ref([])
+const selectedDepartment = ref('')
+const sortBy = ref('dueDate')
+const showApprovalDialog = ref(false)
+const selectedApproval = ref(null)
+const currentAction = ref('')
 
-const filters = ref({
-  priority: '',
-  department: ''
+// Mock approval data
+const pendingApprovals = ref([
+  {
+    id: 1,
+    ticket: {
+      id: 1,
+      ticketNumber: 'T-2024-001',
+      title: 'Hardware Request - New Laptop',
+      description: 'Requesting new laptop for development work. Current machine performance is inadequate for current workload.',
+      priority: 'high',
+      type: 'hardware',
+      requester: { id: 1, name: 'Alice Johnson', email: 'alice@company.com' },
+      department: 'Engineering'
+    },
+    approvalStep: {
+      id: 1,
+      stepOrder: 1,
+      approverRole: 'Manager',
+      dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      estimatedCost: 2500
+    },
+    workflow: {
+      id: 1,
+      type: 'sequential',
+      totalSteps: 2
+    },
+    submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+  },
+  {
+    id: 2,
+    ticket: {
+      id: 2,
+      ticketNumber: 'T-2024-002',
+      title: 'Access Request - Database Permissions',
+      description: 'Need read access to production database for troubleshooting customer issues.',
+      priority: 'medium',
+      type: 'access',
+      requester: { id: 2, name: 'Bob Smith', email: 'bob@company.com' },
+      department: 'Support'
+    },
+    approvalStep: {
+      id: 2,
+      stepOrder: 1,
+      approverRole: 'Manager',
+      dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      estimatedCost: 0
+    },
+    workflow: {
+      id: 2,
+      type: 'sequential',
+      totalSteps: 1
+    },
+    submittedAt: new Date(Date.now() - 6 * 60 * 60 * 1000)
+  },
+  {
+    id: 3,
+    ticket: {
+      id: 3,
+      ticketNumber: 'T-2024-003',
+      title: 'Software License - Adobe Creative Suite',
+      description: 'Need Adobe Creative Suite license for marketing materials creation.',
+      priority: 'low',
+      type: 'software',
+      requester: { id: 3, name: 'Carol Wilson', email: 'carol@company.com' },
+      department: 'Marketing'
+    },
+    approvalStep: {
+      id: 3,
+      stepOrder: 1,
+      approverRole: 'Manager',
+      dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // Overdue
+      estimatedCost: 600
+    },
+    workflow: {
+      id: 3,
+      type: 'sequential',
+      totalSteps: 2
+    },
+    submittedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+  }
+])
+
+// Options
+const priorityOptions = [
+  { title: 'Critical', value: 'critical' },
+  { title: 'High', value: 'high' },
+  { title: 'Medium', value: 'medium' },
+  { title: 'Low', value: 'low' }
+]
+
+const typeOptions = [
+  { title: 'Hardware', value: 'hardware' },
+  { title: 'Software', value: 'software' },
+  { title: 'Access', value: 'access' },
+  { title: 'Travel', value: 'travel' },
+  { title: 'Training', value: 'training' }
+]
+
+const departmentOptions = [
+  { title: 'Engineering', value: 'Engineering' },
+  { title: 'Marketing', value: 'Marketing' },
+  { title: 'Sales', value: 'Sales' },
+  { title: 'Support', value: 'Support' },
+  { title: 'HR', value: 'HR' }
+]
+
+const sortOptions = [
+  { title: 'Due Date', value: 'dueDate' },
+  { title: 'Priority', value: 'priority' },
+  { title: 'Submitted Date', value: 'submittedAt' },
+  { title: 'Cost', value: 'estimatedCost' }
+]
+
+// Table headers
+const headers = [
+  { title: 'Ticket', key: 'ticket', sortable: false },
+  { title: 'Priority', key: 'priority', sortable: true },
+  { title: 'Requester', key: 'requester', sortable: false },
+  { title: 'Due Date', key: 'dueDate', sortable: true },
+  { title: 'Cost', key: 'estimatedCost', sortable: true },
+  { title: 'Actions', key: 'actions', sortable: false, width: '200px' }
+]
+
+// Computed
+const filteredApprovals = computed(() => {
+  let filtered = [...pendingApprovals.value]
+
+  if (selectedPriority.value.length > 0) {
+    filtered = filtered.filter(approval =>
+      selectedPriority.value.includes(approval.ticket.priority)
+    )
+  }
+
+  if (selectedType.value.length > 0) {
+    filtered = filtered.filter(approval =>
+      selectedType.value.includes(approval.ticket.type)
+    )
+  }
+
+  if (selectedDepartment.value) {
+    filtered = filtered.filter(approval =>
+      approval.ticket.department === selectedDepartment.value
+    )
+  }
+
+  // Sort
+  if (sortBy.value === 'dueDate') {
+    filtered.sort((a, b) => a.approvalStep.dueDate.getTime() - b.approvalStep.dueDate.getTime())
+  } else if (sortBy.value === 'priority') {
+    const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 }
+    filtered.sort((a, b) => priorityOrder[b.ticket.priority] - priorityOrder[a.ticket.priority])
+  }
+
+  return filtered
 })
 
-const approvals = computed(() => approvalStore.pendingApprovals)
-const stats = computed(() => approvalStore.approvalStats)
-const hasActiveFilters = computed(() => Object.values(filters.value).some(filter => filter !== ''))
-
-const loadApprovals = async () => {
-  loading.value = true
-  try {
-    await Promise.all([
-      approvalStore.fetchPendingApprovals(filters.value),
-      approvalStore.fetchApprovalStats(),
-      loadDepartments()
-    ])
-  } catch (error) {
-    console.error('Failed to load approvals:', error)
-  } finally {
-    loading.value = false
+// Methods
+const getPriorityColor = (priority: string) => {
+  const colors = {
+    critical: 'priority-critical',
+    high: 'priority-high',
+    medium: 'priority-medium',
+    low: 'priority-low'
   }
+  return colors[priority] || 'grey'
 }
 
-const loadDepartments = async () => {
-  try {
-    departments.value = await approvalStore.fetchDepartments()
-  } catch (error) {
-    console.error('Failed to load departments:', error)
-  }
+const getInitials = (name: string) => {
+  return name.split(' ').map(n => n.charAt(0)).join('').toUpperCase()
 }
 
-const refreshQueue = () => loadApprovals()
-
-const applyFilters = () => loadApprovals()
-
-const clearFilters = () => {
-  filters.value = { priority: '', department: '' }
-  loadApprovals()
+const formatDate = (date: Date) => {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(date)
 }
 
-const toggleSelectAll = (event) => {
-  if (event.target.checked) {
-    selectedApprovals.value = approvals.value.map(a => a.id)
+const formatRelativeTime = (date: Date) => {
+  const now = new Date()
+  const diff = date.getTime() - now.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  
+  if (diff < 0) {
+    return `${Math.abs(days)} days overdue`
+  } else if (days === 0) {
+    return 'Due today'
+  } else if (days === 1) {
+    return 'Due tomorrow'
   } else {
-    selectedApprovals.value = []
+    return `Due in ${days} days`
   }
 }
 
-const processApproval = async (approvalId, action) => {
-  if (action === 'reject') {
-    currentApprovalId.value = approvalId
-    showRejectModal.value = true
-    return
-  }
-
-  processing.value.push(approvalId)
-  try {
-    await approvalStore.processApproval(approvalId, {
-      action,
-      comments: action === 'approve' ? 'Approved from queue' : ''
-    })
-    
-    selectedApprovals.value = selectedApprovals.value.filter(id => id !== approvalId)
-    await loadApprovals()
-  } catch (error) {
-    console.error(`Failed to ${action} approval:`, error)
-  } finally {
-    processing.value = processing.value.filter(id => id !== approvalId)
-  }
+const isOverdue = (date: Date) => {
+  return date.getTime() < new Date().getTime()
 }
 
-const confirmReject = async () => {
-  processing.value.push(currentApprovalId.value)
-  try {
-    await approvalStore.processApproval(currentApprovalId.value, {
-      action: 'reject',
-      comments: rejectReason.value
-    })
-    
-    selectedApprovals.value = selectedApprovals.value.filter(id => id !== currentApprovalId.value)
-    showRejectModal.value = false
-    rejectReason.value = ''
-    currentApprovalId.value = null
-    
-    await loadApprovals()
-  } catch (error) {
-    console.error('Failed to reject approval:', error)
-  } finally {
-    processing.value = processing.value.filter(id => id !== currentApprovalId.value)
-  }
+const truncateText = (text: string, length: number) => {
+  return text.length > length ? text.substring(0, length) + '...' : text
 }
 
-const requestMoreInfo = async (approvalId) => {
-  processing.value.push(approvalId)
-  try {
-    await approvalStore.requestMoreInfo(approvalId, {
-      message: 'Please provide additional information for this request.'
-    })
-    
-    await loadApprovals()
-  } catch (error) {
-    console.error('Failed to request more info:', error)
-  } finally {
-    processing.value = processing.value.filter(id => id !== approvalId)
-  }
+const approveItem = (approval: any) => {
+  selectedApproval.value = approval
+  currentAction.value = 'approve'
+  showApprovalDialog.value = true
 }
 
-const bulkApprove = async () => {
-  if (!selectedApprovals.value.length) return
+const rejectItem = (approval: any) => {
+  selectedApproval.value = approval
+  currentAction.value = 'reject'
+  showApprovalDialog.value = true
+}
+
+const requestMoreInfo = (approval: any) => {
+  selectedApproval.value = approval
+  currentAction.value = 'request_info'
+  showApprovalDialog.value = true
+}
+
+const delegateApproval = (approval: any) => {
+  selectedApproval.value = approval
+  currentAction.value = 'delegate'
+  showApprovalDialog.value = true
+}
+
+const handleApprovalAction = (action: string, data: any) => {
+  console.log('Approval action:', action, data)
   
-  const approvalIds = [...selectedApprovals.value]
-  processing.value.push(...approvalIds)
-  
-  try {
-    await approvalStore.bulkProcessApprovals(approvalIds, {
-      action: 'approve',
-      comments: 'Bulk approved from queue'
-    })
-    
-    selectedApprovals.value = []
-    await loadApprovals()
-  } catch (error) {
-    console.error('Failed to bulk approve:', error)
-  } finally {
-    processing.value = processing.value.filter(id => !approvalIds.includes(id))
+  // Remove from pending list
+  const index = pendingApprovals.value.findIndex(
+    approval => approval.id === selectedApproval.value.id
+  )
+  if (index > -1) {
+    pendingApprovals.value.splice(index, 1)
   }
+  
+  showApprovalDialog.value = false
+  selectedApproval.value = null
 }
 
-const viewTicket = (ticketId) => router.push(`/tickets/${ticketId}`)
-
-// Utility methods
-const isUrgent = (approval) => approval.priority === 'critical' || approval.priority === 'high'
-const isOverdue = (approval) => approval.due_date && new Date(approval.due_date) < new Date()
-
-const formatTimeAgo = (date) => {
-  const diffInMinutes = Math.floor((new Date().getTime() - new Date(date).getTime()) / (1000 * 60))
-  if (diffInMinutes < 1) return 'Just now'
-  if (diffInMinutes < 60) return `${diffInMinutes}m ago`
-  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
-  return `${Math.floor(diffInMinutes / 1440)}d ago`
-}
-
-const formatDate = (date) => new Date(date).toLocaleDateString()
-const formatType = (type) => type ? type.charAt(0).toUpperCase() + type.slice(1) : ''
-const formatCurrency = (amount) => new Intl.NumberFormat().format(amount)
-const truncateText = (text, maxLength) => text.length <= maxLength ? text : text.substring(0, maxLength) + '...'
-
-onMounted(() => loadApprovals())
+// Lifecycle
+onMounted(() => {
+  setTimeout(() => {
+    loading.value = false
+  }, 1000)
+})
 </script>
-
-<style scoped>
-.approval-queue { padding: 0.75rem; max-width: 1400px; margin: 0 auto; min-height: 100vh; }
-.page-header { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; }
-.page-title { font-size: 1.5rem; font-weight: 600; color: #1f2937; margin: 0; line-height: 1.2; }
-.page-subtitle { color: #6b7280; margin: 0; font-size: 0.875rem; }
-.header-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-.stats-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-.stat-card { background: white; border-radius: 0.75rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); display: flex; align-items: center; gap: 0.75rem; min-height: 80px; }
-.approval-item { display: flex; flex-direction: column; gap: 1rem; padding: 1rem; border-bottom: 1px solid #f3f4f6; transition: all 0.2s; }
-.approval-actions { display: flex; flex-direction: column; gap: 0.5rem; }
-.action-btn { padding: 0.75rem 1rem; border: none; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.25rem; min-height: 48px; }
-
-@media (min-width: 375px) {
-  .approval-queue { padding: 1rem; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .page-title { font-size: 1.625rem; }
-  .approval-actions { flex-direction: row; gap: 0.75rem; }
-}
-
-@media (min-width: 480px) {
-  .page-header { flex-direction: row; justify-content: space-between; align-items: flex-start; }
-  .page-title { font-size: 1.75rem; }
-  .stats-grid { grid-template-columns: repeat(3, 1fr); }
-  .approval-item { flex-direction: row; align-items: flex-start; }
-}
-
-@media (min-width: 768px) {
-  .approval-queue { padding: 1.5rem; }
-  .page-title { font-size: 2rem; }
-  .approval-item { padding: 1.5rem; }
-}
-
-@media (max-width: 768px) {
-  .approval-queue { padding: 1rem; }
-  .page-header { flex-direction: column; }
-  .approval-item { flex-direction: column; gap: 1rem; }
-  .approval-actions { flex-direction: row; }
-}
-.stat-card.urgent { border-left: 4px solid #dc2626; }
-.stat-card.pending { border-left: 4px solid #f59e0b; }
-.stat-card.overdue { border-left: 4px solid #7c2d12; }
-.stat-icon { width: 3rem; height: 3rem; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem; }
-.urgent .stat-icon { background: #dc2626; }
-.pending .stat-icon { background: #f59e0b; }
-.overdue .stat-icon { background: #7c2d12; }
-.stat-value { font-size: 2rem; font-weight: 700; color: #1f2937; line-height: 1; }
-.stat-label { color: #6b7280; font-size: 0.875rem; }
-.filters-section { background: white; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
-.filter-controls { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
-.filter-select { padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; background: white; min-width: 150px; }
-.queue-container { background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); overflow: hidden; }
-.loading-state, .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; text-align: center; }
-.spinner { width: 2rem; height: 2rem; border: 2px solid #f3f4f6; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.rotating { animation: spin 1s linear infinite; }
-.bulk-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
-.bulk-checkbox { display: flex; align-items: center; gap: 0.5rem; font-weight: 500; }
-.selection-info { color: #6b7280; font-size: 0.875rem; }
-.approval-item { display: flex; gap: 1rem; padding: 1.5rem; border-bottom: 1px solid #f3f4f6; transition: all 0.2s; }
-.approval-item:hover { background: #f9fafb; }
-.approval-item.selected { background: #eff6ff; border-left: 4px solid #3b82f6; }
-.approval-item.urgent { border-left: 4px solid #dc2626; }
-.approval-item.overdue { border-left: 4px solid #7c2d12; }
-.approval-checkbox { display: flex; align-items: flex-start; padding-top: 0.25rem; }
-.approval-content { flex: 1; cursor: pointer; }
-.approval-header { margin-bottom: 1rem; }
-.approval-title h4 { font-size: 1.125rem; font-weight: 600; color: #1f2937; margin: 0 0 0.5rem 0; }
-.approval-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.ticket-number { color: #3b82f6; font-weight: 500; }
-.priority-badge { padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; }
-.priority-critical { background: #fee2e2; color: #dc2626; }
-.priority-high { background: #fed7aa; color: #ea580c; }
-.priority-medium { background: #fef3c7; color: #ca8a04; }
-.priority-low { background: #dcfce7; color: #16a34a; }
-.urgent-badge { background: #dc2626; color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 500; }
-.overdue-badge { background: #7c2d12; color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 500; }
-.approval-meta { display: flex; gap: 1rem; color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem; }
-.approval-description { color: #374151; line-height: 1.5; margin-bottom: 1rem; }
-.approval-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-.detail-item { display: flex; flex-direction: column; gap: 0.25rem; }
-.detail-item label { font-size: 0.875rem; font-weight: 500; color: #6b7280; }
-.amount { font-weight: 600; color: #1f2937; }
-.overdue { color: #dc2626; font-weight: 500; }
-.approval-actions { display: flex; flex-direction: column; gap: 0.5rem; min-width: 120px; }
-.action-btn { padding: 0.5rem 1rem; border: none; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.25rem; }
-.approve-btn { background: #16a34a; color: white; }
-.approve-btn:hover:not(:disabled) { background: #15803d; }
-.reject-btn { background: #dc2626; color: white; }
-.reject-btn:hover:not(:disabled) { background: #b91c1c; }
-.info-btn { background: #3b82f6; color: white; }
-.info-btn:hover:not(:disabled) { background: #2563eb; }
-.action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal { background: white; border-radius: 0.75rem; max-width: 500px; width: 90%; max-height: 90vh; overflow: auto; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e5e7eb; }
-.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
-.modal-body { padding: 1.5rem; }
-.form-group { margin-bottom: 1rem; }
-.form-group label { display: block; font-weight: 500; color: #374151; margin-bottom: 0.5rem; }
-.form-textarea { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; resize: vertical; }
-.modal-footer { display: flex; justify-content: flex-end; gap: 1rem; padding: 1.5rem; border-top: 1px solid #e5e7eb; }
-.btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: none; border-radius: 0.375rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-.btn-primary { background: #3b82f6; color: white; }
-.btn-outline { background: white; color: #374151; border: 1px solid #d1d5db; }
-.btn-success { background: #16a34a; color: white; }
-.btn-danger { background: #dc2626; color: white; }
-.btn-sm { padding: 0.25rem 0.75rem; font-size: 0.875rem; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-@media (max-width: 768px) {
-  .approval-queue { padding: 1rem; }
-  .page-header { flex-direction: column; gap: 1rem; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .filter-controls { flex-direction: column; align-items: stretch; }
-  .approval-item { flex-direction: column; gap: 1rem; }
-  .approval-actions { flex-direction: row; min-width: auto; }
-}
-</style>

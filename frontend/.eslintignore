@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+dist/
+
+# Build outputs
+*.tsbuildinfo
+
+# Configuration files
+vite.config.ts
+*.config.js
+*.config.ts
+
+# Generated files
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.*
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

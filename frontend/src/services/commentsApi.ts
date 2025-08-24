@@ -148,12 +148,12 @@ export class CommentsApiService {
     if (params.include_replies !== undefined) queryParams.append('include_replies', params.include_replies.toString())
     if (params.include_system !== undefined) queryParams.append('include_system', params.include_system.toString())
 
-    return apiClient.get(`/tickets/${ticketId}/comments?${queryParams.toString()}`)
+    return apiClient.get(`/api/v1/comments/tickets/${ticketId}?${queryParams.toString()}`)
   }
 
   // Get single comment
   async getComment(commentId: number): Promise<TicketComment> {
-    return apiClient.get(`/comments/${commentId}`)
+    return apiClient.get(`/api/v1/comments/${commentId}`)
   }
 
   // Add comment to ticket
@@ -180,19 +180,19 @@ export class CommentsApiService {
       })
     }
 
-    return apiClient.post(`/tickets/${ticketId}/comments`, formData, {
+    return apiClient.post(`/api/v1/comments/tickets/${ticketId}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
   }
 
   // Update comment
   async updateComment(commentId: number, data: CommentUpdate): Promise<TicketComment> {
-    return apiClient.patch(`/comments/${commentId}`, data)
+    return apiClient.put(`/api/v1/comments/${commentId}`, data)
   }
 
   // Delete comment
   async deleteComment(commentId: number): Promise<void> {
-    return apiClient.delete(`/comments/${commentId}`)
+    return apiClient.delete(`/api/v1/comments/${commentId}`)
   }
 
   // Like/unlike comment

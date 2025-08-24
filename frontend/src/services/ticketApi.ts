@@ -158,19 +158,19 @@ export class TicketApiService {
     if (params.sort_by) queryParams.append('sort_by', params.sort_by)
     if (params.sort_order) queryParams.append('sort_order', params.sort_order)
     
-    // Add filters
+    // Add filters - match backend parameter names
     if (params.status) queryParams.append('status', params.status)
     if (params.priority) queryParams.append('priority', params.priority)
     if (params.type) queryParams.append('type', params.type)
     if (params.department_id) queryParams.append('department_id', params.department_id.toString())
-    if (params.assigned_to_id) queryParams.append('assigned_to_id', params.assigned_to_id.toString())
-    if (params.created_by_id) queryParams.append('created_by_id', params.created_by_id.toString())
-    if (params.date_from) queryParams.append('date_from', params.date_from)
-    if (params.date_to) queryParams.append('date_to', params.date_to)
-    if (params.search) queryParams.append('search', params.search)
-    if (params.tags?.length) queryParams.append('tags', params.tags.join(','))
+    if (params.assigned_to_id) queryParams.append('assignee_id', params.assigned_to_id.toString()) // Changed to match backend
+    if (params.created_by_id) queryParams.append('requester_id', params.created_by_id.toString()) // Changed to match backend
+    if (params.search) queryParams.append('search_query', params.search) // Changed to match backend
+    if (params.tags?.length) {
+      params.tags.forEach(tag => queryParams.append('tags', tag)) // Multiple tags as separate params
+    }
 
-    return apiClient.get(`/tickets?${queryParams.toString()}`)
+    return apiClient.get(`/api/v1/tickets/?${queryParams.toString()}`)
   }
 
   // Get my tickets
@@ -203,22 +203,22 @@ export class TicketApiService {
 
   // Get single ticket by ID
   async getTicket(id: number): Promise<Ticket> {
-    return apiClient.get(`/tickets/${id}`)
+    return apiClient.get(`/api/v1/tickets/${id}`)
   }
 
   // Create new ticket
   async createTicket(data: TicketCreate): Promise<Ticket> {
-    return apiClient.post('/tickets', data)
+    return apiClient.post('/api/v1/tickets/', data)
   }
 
   // Update ticket
   async updateTicket(id: number, data: TicketUpdate): Promise<Ticket> {
-    return apiClient.patch(`/tickets/${id}`, data)
+    return apiClient.put(`/api/v1/tickets/${id}`, data)
   }
 
   // Delete ticket
   async deleteTicket(id: number): Promise<void> {
-    return apiClient.delete(`/tickets/${id}`)
+    return apiClient.delete(`/api/v1/tickets/${id}`)
   }
 
   // Bulk operations
@@ -237,21 +237,16 @@ export class TicketApiService {
 
   // Assign ticket
   async assignTicket(id: number, assigneeId: number): Promise<Ticket> {
-    return apiClient.patch(`/tickets/${id}/assign`, {
-      assigned_to_id: assigneeId
+    return apiClient.post(`/api/v1/tickets/${id}/assign`, {
+      assignee_id: assigneeId
     })
   }
 
-  // Unassign ticket
-  async unassignTicket(id: number): Promise<Ticket> {
-    return apiClient.patch(`/tickets/${id}/unassign`)
-  }
-
   // Change ticket status
-  async changeStatus(id: number, status: string, comments?: string): Promise<Ticket> {
-    return apiClient.patch(`/tickets/${id}/status`, {
+  async changeStatus(id: number, status: string, comment?: string): Promise<Ticket> {
+    return apiClient.patch(`/api/v1/tickets/${id}/status`, {
       status,
-      comments
+      comment
     })
   }
 
@@ -270,17 +265,24 @@ export class TicketApiService {
 
   // Get ticket statistics
   async getTicketStats(params?: {
+    user_id?: number
     department_id?: number
     date_from?: string
     date_to?: string
   }): Promise<TicketStats> {
     const queryParams = new URLSearchParams()
     
+    if (params?.user_id) queryParams.append('user_id', params.user_id.toString())
     if (params?.department_id) queryParams.append('department_id', params.department_id.toString())
     if (params?.date_from) queryParams.append('date_from', params.date_from)
     if (params?.date_to) queryParams.append('date_to', params.date_to)
 
-    return apiClient.get(`/tickets/stats?${queryParams.toString()}`)
+    return apiClient.get(`/api/v1/tickets/statistics/overview?${queryParams.toString()}`)
+  }
+
+  // Get dashboard data for current user
+  async getDashboardData(): Promise<TicketStats> {
+    return apiClient.get('/api/v1/tickets/my/dashboard')
   }
 
   // Export tickets

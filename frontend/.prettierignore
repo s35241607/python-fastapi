@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+dist/
+
+# Build outputs
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+
+# Configuration files that should maintain their formatting
+package-lock.json
+*.min.js
+*.min.css
+
+# Generated files
+coverage/
+.nyc_output/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files
+Dockerfile*
+*.dockerfile

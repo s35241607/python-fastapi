@@ -1,36 +1,60 @@
 <template>
-  <div id="app">
-    <nav>
-      <router-link to="/">Home</router-link> |
-      <router-link to="/users">Users</router-link>
-    </nav>
-    <main>
-      <router-view />
-    </main>
-  </div>
+  <v-app>
+    <!-- Navigation Drawer -->
+    <v-navigation-drawer
+      v-model="drawer"
+      :rail="rail"
+      permanent
+      class="elevation-1"
+    >
+      <AppSidebar @toggle-rail="rail = !rail" />
+    </v-navigation-drawer>
+
+    <!-- App Bar -->
+    <v-app-bar
+      color="primary"
+      density="comfortable"
+      flat
+    >
+      <AppTopBar @toggle-drawer="drawer = !drawer" />
+    </v-app-bar>
+
+    <!-- Main Content -->
+    <v-main>
+      <v-container fluid>
+        <AppBreadcrumb v-if="showBreadcrumb" />
+        <router-view />
+      </v-container>
+    </v-main>
+
+    <!-- Notification Center -->
+    <AppNotificationCenter />
+  </v-app>
 </template>
 
 <script setup lang="ts">
-// App component logic here
+import { ref, onMounted } from 'vue'
+import { useDisplay } from 'vuetify'
+import { useThemeStore } from './stores/theme'
+import AppSidebar from './components/Layout/AppSidebar.vue'
+import AppTopBar from './components/Layout/AppTopBar.vue'
+import AppBreadcrumb from './components/Layout/AppBreadcrumb.vue'
+import AppNotificationCenter from './components/Layout/AppNotificationCenter.vue'
+
+const { mobile } = useDisplay()
+const themeStore = useThemeStore()
+
+const drawer = ref(true)
+const rail = ref(false)
+const showBreadcrumb = ref(true)
+
+// Initialize theme on app mount
+onMounted(() => {
+  themeStore.initializeTheme()
+  
+  // Hide drawer on mobile by default
+  if (mobile.value) {
+    drawer.value = false
+  }
+})
 </script>
-
-<style scoped>
-nav {
-  padding: 30px;
-}
-
-nav a {
-  font-weight: bold;
-  color: #2c3e50;
-  text-decoration: none;
-  margin: 0 10px;
-}
-
-nav a.router-link-exact-active {
-  color: #42b983;
-}
-
-main {
-  padding: 20px;
-}
-</style>

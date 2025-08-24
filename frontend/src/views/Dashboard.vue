@@ -1,374 +1,350 @@
 <template>
-  <div class="dashboard">
+  <div>
     <!-- Page Header -->
-    <div class="dashboard-header">
-      <div class="header-content">
-        <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle">Welcome back, {{ authStore.user?.first_name }}!</p>
+    <div class="d-flex justify-space-between align-center mb-6">
+      <div>
+        <h1 class="text-h4 font-weight-light">Dashboard</h1>
+        <p class="text-subtitle-1 text-medium-emphasis">
+          Welcome back, {{ currentUser.name }}! Here's your ticket overview.
+        </p>
       </div>
-      <div class="header-actions">
-        <button @click="refreshDashboard" :disabled="loading" class="btn btn-outline">
-          <i class="icon-refresh" :class="{ 'rotating': loading }"></i>
-          Refresh
-        </button>
-        <select v-model="dateRange" @change="onDateRangeChange" class="select">
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-          <option value="year">This Year</option>
-        </select>
-      </div>
+      <v-btn
+        color="primary"
+        prepend-icon="mdi-plus"
+        to="/tickets/create"
+      >
+        Create Ticket
+      </v-btn>
     </div>
 
-    <!-- Quick Stats Cards -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon stat-icon-primary">
-          <i class="icon-ticket"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ dashboardStore.metrics?.total_tickets || 0 }}</div>
-          <div class="stat-label">Total Tickets</div>
-          <div class="stat-change positive">
-            <i class="icon-trending-up"></i>
-            {{ Math.abs(dashboardStore.metrics?.tickets_change || 0) }}%
-          </div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon stat-icon-warning">
-          <i class="icon-clock"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ dashboardStore.metrics?.pending_tickets || 0 }}</div>
-          <div class="stat-label">Pending Tickets</div>
-          <div class="stat-change neutral">
-            <i class="icon-minus"></i>
-            {{ Math.abs(dashboardStore.metrics?.pending_change || 0) }}%
-          </div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon stat-icon-success">
-          <i class="icon-check"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ dashboardStore.metrics?.resolved_tickets || 0 }}</div>
-          <div class="stat-label">Resolved Tickets</div>
-          <div class="stat-change positive">
-            <i class="icon-trending-up"></i>
-            {{ Math.abs(dashboardStore.metrics?.resolved_change || 0) }}%
-          </div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon stat-icon-info">
-          <i class="icon-users"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ dashboardStore.metrics?.avg_resolution_time || 0 }}</div>
-          <div class="stat-label">Avg Resolution (hrs)</div>
-          <div class="stat-change negative">
-            <i class="icon-trending-down"></i>
-            {{ Math.abs(dashboardStore.metrics?.resolution_time_change || 0) }}%
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Content Grid -->
-    <div class="dashboard-grid">
-      <!-- Pending Approvals -->
-      <div class="dashboard-card pending-approvals">
-        <div class="card-header">
-          <h2 class="card-title">
-            <i class="icon-approval"></i>
-            Pending Approvals
-          </h2>
-          <div class="card-actions">
-            <span class="badge badge-warning">{{ pendingApprovals.length }}</span>
-            <router-link to="/approvals" class="btn btn-sm btn-outline">View All</router-link>
-          </div>
-        </div>
-        <div class="card-content">
-          <div v-if="loading" class="loading-state">
-            <div class="spinner"></div>
-            <p>Loading approvals...</p>
-          </div>
-          <div v-else-if="pendingApprovals.length === 0" class="empty-state">
-            <i class="icon-check-circle"></i>
-            <p>No pending approvals</p>
-          </div>
-          <div v-else class="approvals-list">
-            <div v-for="approval in pendingApprovals.slice(0, 5)" :key="approval.id" class="approval-item" @click="viewTicket(approval.ticket_id)">
-              <div class="approval-info">
-                <h4 class="approval-title">{{ approval.ticket_title }}</h4>
-                <p class="approval-meta">
-                  <span class="ticket-number">#{{ approval.ticket_number }}</span>
-                  <span class="priority" :class="`priority-${approval.priority}`">{{ approval.priority }}</span>
-                  <span class="department">{{ approval.department }}</span>
-                </p>
-                <p class="approval-details">
-                  Requested by {{ approval.requester_name }} • {{ formatTimeAgo(approval.created_at) }}
-                </p>
+    <!-- KPI Cards -->
+    <v-row class="mb-6">
+      <v-col
+        v-for="kpi in kpiData"
+        :key="kpi.title"
+        cols="12"
+        sm="6"
+        md="3"
+      >
+        <v-card
+          :color="kpi.color"
+          class="text-white"
+          height="120"
+        >
+          <v-card-text>
+            <div class="d-flex justify-space-between align-center">
+              <div>
+                <div class="text-h3 font-weight-bold">{{ kpi.value }}</div>
+                <div class="text-subtitle-1">{{ kpi.title }}</div>
+                <div 
+                  v-if="kpi.change"
+                  class="text-caption d-flex align-center mt-1"
+                >
+                  <v-icon 
+                    :icon="kpi.changeIcon" 
+                    size="small" 
+                    class="me-1"
+                  />
+                  {{ kpi.change }}
+                </div>
               </div>
-              <div class="approval-actions">
-                <button @click.stop="quickApprove(approval.id, 'approve')" class="btn btn-sm btn-success" :disabled="processing">
-                  <i class="icon-check"></i> Approve
-                </button>
-                <button @click.stop="quickApprove(approval.id, 'reject')" class="btn btn-sm btn-danger" :disabled="processing">
-                  <i class="icon-x"></i> Reject
-                </button>
-              </div>
+              <v-icon size="40">{{ kpi.icon }}</v-icon>
             </div>
-          </div>
-        </div>
-      </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <!-- Quick Actions -->
+      <v-col cols="12" md="4">
+        <v-card>
+          <v-card-title class="d-flex align-center">
+            <v-icon class="me-2">mdi-lightning-bolt</v-icon>
+            Quick Actions
+          </v-card-title>
+          <v-card-text>
+            <v-btn
+              v-for="action in quickActions"
+              :key="action.title"
+              :color="action.color"
+              :prepend-icon="action.icon"
+              :to="action.to"
+              variant="tonal"
+              block
+              class="mb-2"
+            >
+              {{ action.title }}
+            </v-btn>
+          </v-card-text>
+        </v-card>
+
+        <!-- Priority Tickets Summary -->
+        <v-card class="mt-4">
+          <v-card-title class="d-flex align-center">
+            <v-icon class="me-2">mdi-fire</v-icon>
+            Priority Tickets
+          </v-card-title>
+          <v-card-text>
+            <div 
+              v-for="priority in prioritySummary" 
+              :key="priority.level"
+              class="d-flex justify-space-between align-center mb-2"
+            >
+              <div class="d-flex align-center">
+                <v-chip
+                  :color="priority.color"
+                  size="small"
+                  variant="tonal"
+                  class="me-2"
+                >
+                  {{ priority.level }}
+                </v-chip>
+              </div>
+              <span class="font-weight-medium">{{ priority.count }}</span>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
       <!-- Recent Activity -->
-      <div class="dashboard-card recent-activity">
-        <div class="card-header">
-          <h2 class="card-title">
-            <i class="icon-activity"></i>
-            Recent Activity
-          </h2>
-          <router-link to="/activity" class="btn btn-sm btn-outline">View All</router-link>
-        </div>
-        <div class="card-content">
-          <div v-if="loading" class="loading-state">
-            <div class="spinner"></div>
-            <p>Loading activity...</p>
-          </div>
-          <div v-else-if="recentActivity.length === 0" class="empty-state">
-            <i class="icon-calendar"></i>
-            <p>No recent activity</p>
-          </div>
-          <div v-else class="activity-list">
-            <div v-for="activity in recentActivity.slice(0, 8)" :key="activity.id" class="activity-item">
-              <div class="activity-icon" :class="`icon-${activity.type}`">
-                <i :class="getActivityIcon(activity.type)"></i>
-              </div>
-              <div class="activity-content">
-                <p class="activity-text">{{ activity.description }}</p>
-                <p class="activity-meta">{{ activity.user_name }} • {{ formatTimeAgo(activity.created_at) }}</p>
+      <v-col cols="12" md="8">
+        <v-card>
+          <v-card-title class="d-flex align-center justify-space-between">
+            <div class="d-flex align-center">
+              <v-icon class="me-2">mdi-history</v-icon>
+              Recent Activity
+            </div>
+            <v-btn
+              variant="text"
+              size="small"
+              to="/tickets"
+            >
+              View All
+            </v-btn>
+          </v-card-title>
+          <v-card-text>
+            <v-timeline
+              density="compact"
+              class="mt-2"
+            >
+              <v-timeline-item
+                v-for="activity in recentActivity"
+                :key="activity.id"
+                :dot-color="activity.color"
+                size="small"
+              >
+                <template v-slot:opposite>
+                  <span class="text-caption text-medium-emphasis">
+                    {{ formatTime(activity.timestamp) }}
+                  </span>
+                </template>
+
+                <v-card
+                  :color="activity.color"
+                  variant="tonal"
+                  class="mb-2"
+                >
+                  <v-card-text class="py-2">
+                    <div class="text-subtitle-2 font-weight-medium">
+                      {{ activity.title }}
+                    </div>
+                    <div class="text-body-2 text-medium-emphasis">
+                      {{ activity.description }}
+                    </div>
+                    <div 
+                      v-if="activity.ticketId"
+                      class="text-caption mt-1"
+                    >
+                      <router-link 
+                        :to="`/tickets/${activity.ticketId}`"
+                        class="text-decoration-none"
+                      >
+                        Ticket #{{ activity.ticketId }}
+                      </router-link>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-timeline-item>
+            </v-timeline>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Charts Section -->
+    <v-row class="mt-6">
+      <v-col cols="12" md="6">
+        <v-card>
+          <v-card-title>Ticket Status Distribution</v-card-title>
+          <v-card-text>
+            <div class="text-center pa-8">
+              <v-icon size="64" color="grey-lighten-1">mdi-chart-donut</v-icon>
+              <div class="text-subtitle-1 mt-2">Chart Coming Soon</div>
+              <div class="text-caption text-medium-emphasis">
+                Integration with Chart.js pending
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-      <!-- Priority Distribution Chart -->
-      <div class="dashboard-card priority-chart">
-        <div class="card-header">
-          <h2 class="card-title">
-            <i class="icon-pie-chart"></i>
-            Priority Distribution
-          </h2>
-        </div>
-        <div class="card-content">
-          <div class="chart-container">
-            <canvas ref="priorityChartCanvas" width="300" height="200"></canvas>
-          </div>
-          <div class="chart-legend">
-            <div v-for="item in priorityData" :key="item.label" class="legend-item">
-              <span class="legend-color" :style="{ backgroundColor: item.color }"></span>
-              <span class="legend-label">{{ item.label }}: {{ item.value }}</span>
+      <v-col cols="12" md="6">
+        <v-card>
+          <v-card-title>Weekly Ticket Trends</v-card-title>
+          <v-card-text>
+            <div class="text-center pa-8">
+              <v-icon size="64" color="grey-lighten-1">mdi-chart-line</v-icon>
+              <div class="text-subtitle-1 mt-2">Chart Coming Soon</div>
+              <div class="text-caption text-medium-emphasis">
+                Integration with Chart.js pending
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="dashboard-card quick-actions">
-        <div class="card-header">
-          <h2 class="card-title">
-            <i class="icon-zap"></i>
-            Quick Actions
-          </h2>
-        </div>
-        <div class="card-content">
-          <div class="actions-grid">
-            <router-link to="/tickets/create" class="action-button">
-              <i class="icon-plus"></i>
-              <span>Create Ticket</span>
-            </router-link>
-            <button @click="exportReport" class="action-button">
-              <i class="icon-download"></i>
-              <span>Export Report</span>
-            </button>
-            <router-link to="/users" class="action-button">
-              <i class="icon-users"></i>
-              <span>Manage Users</span>
-            </router-link>
-            <router-link to="/settings" class="action-button">
-              <i class="icon-settings"></i>
-              <span>Settings</span>
-            </router-link>
-          </div>
-        </div>
-      </div>
-    </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { useDashboardStore } from '@/stores/dashboard'
-import { useApprovalStore } from '@/stores/approval'
+import { ref, computed } from 'vue'
 
-const router = useRouter()
-const authStore = useAuthStore()
-const dashboardStore = useDashboardStore()
-const approvalStore = useApprovalStore()
+// Mock current user - this would come from auth store
+const currentUser = ref({
+  name: 'John Doe',
+  role: 'Manager'
+})
 
-// Reactive data
-const loading = ref(true)
-const processing = ref(false)
-const dateRange = ref('month')
-
-// Chart canvas refs
-const priorityChartCanvas = ref<HTMLCanvasElement>()
-
-// Computed properties
-const pendingApprovals = computed(() => approvalStore.pendingApprovals)
-const recentActivity = computed(() => dashboardStore.recentActivity)
-
-const priorityData = computed(() => [
-  { label: 'Critical', value: dashboardStore.metrics?.priority_critical || 0, color: '#dc2626' },
-  { label: 'High', value: dashboardStore.metrics?.priority_high || 0, color: '#ea580c' },
-  { label: 'Medium', value: dashboardStore.metrics?.priority_medium || 0, color: '#ca8a04' },
-  { label: 'Low', value: dashboardStore.metrics?.priority_low || 0, color: '#16a34a' }
+// KPI Data
+const kpiData = ref([
+  {
+    title: 'Open Tickets',
+    value: 24,
+    icon: 'mdi-ticket',
+    color: 'primary',
+    change: '+12% this week',
+    changeIcon: 'mdi-trending-up'
+  },
+  {
+    title: 'Pending Approvals',
+    value: 8,
+    icon: 'mdi-clock-outline',
+    color: 'warning',
+    change: '+3 today',
+    changeIcon: 'mdi-trending-up'
+  },
+  {
+    title: 'Resolved Today',
+    value: 15,
+    icon: 'mdi-check-circle',
+    color: 'success',
+    change: '+25% vs yesterday',
+    changeIcon: 'mdi-trending-up'
+  },
+  {
+    title: 'Average Response',
+    value: '2.4h',
+    icon: 'mdi-speedometer',
+    color: 'info',
+    change: '-15% this week',
+    changeIcon: 'mdi-trending-down'
+  }
 ])
 
-// Auto-refresh interval
-let refreshInterval: NodeJS.Timeout | null = null
+// Quick Actions
+const quickActions = ref([
+  {
+    title: 'Create Ticket',
+    icon: 'mdi-plus',
+    color: 'primary',
+    to: '/tickets/create'
+  },
+  {
+    title: 'My Tickets',
+    icon: 'mdi-account-box',
+    color: 'secondary',
+    to: '/tickets/my-tickets'
+  },
+  {
+    title: 'Approval Queue',
+    icon: 'mdi-check-decagram',
+    color: 'warning',
+    to: '/approvals'
+  },
+  {
+    title: 'Reports',
+    icon: 'mdi-chart-line',
+    color: 'info',
+    to: '/reports'
+  }
+])
+
+// Priority Summary
+const prioritySummary = ref([
+  { level: 'Critical', count: 3, color: 'error' },
+  { level: 'High', count: 8, color: 'warning' },
+  { level: 'Medium', count: 12, color: 'primary' },
+  { level: 'Low', count: 6, color: 'success' }
+])
+
+// Recent Activity
+const recentActivity = ref([
+  {
+    id: 1,
+    title: 'Ticket Created',
+    description: 'New support ticket submitted by Alice Johnson',
+    timestamp: new Date(Date.now() - 5 * 60000), // 5 minutes ago
+    color: 'primary',
+    ticketId: 'T-2024-001'
+  },
+  {
+    id: 2,
+    title: 'Approval Required',
+    description: 'Hardware request needs manager approval',
+    timestamp: new Date(Date.now() - 15 * 60000), // 15 minutes ago
+    color: 'warning',
+    ticketId: 'T-2024-002'
+  },
+  {
+    id: 3,
+    title: 'Ticket Resolved',
+    description: 'Password reset completed for Bob Smith',
+    timestamp: new Date(Date.now() - 30 * 60000), // 30 minutes ago
+    color: 'success',
+    ticketId: 'T-2024-003'
+  },
+  {
+    id: 4,
+    title: 'Comment Added',
+    description: 'Technical team provided update on server issue',
+    timestamp: new Date(Date.now() - 45 * 60000), // 45 minutes ago
+    color: 'info',
+    ticketId: 'T-2024-004'
+  },
+  {
+    id: 5,
+    title: 'Ticket Escalated',
+    description: 'Critical infrastructure issue escalated to senior team',
+    timestamp: new Date(Date.now() - 60 * 60000), // 1 hour ago
+    color: 'error',
+    ticketId: 'T-2024-005'
+  }
+])
 
 // Methods
-const refreshDashboard = async () => {
-  loading.value = true
-  try {
-    await Promise.all([
-      dashboardStore.fetchMetrics(dateRange.value),
-      dashboardStore.fetchRecentActivity(),
-      approvalStore.fetchPendingApprovals()
-    ])
-    
-    await nextTick()
-    renderPriorityChart()
-  } catch (error) {
-    console.error('Failed to refresh dashboard:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const onDateRangeChange = () => {
-  refreshDashboard()
-}
-
-const viewTicket = (ticketId: number) => {
-  router.push(`/tickets/${ticketId}`)
-}
-
-const quickApprove = async (approvalId: number, action: 'approve' | 'reject') => {
-  processing.value = true
-  try {
-    await approvalStore.processApproval(approvalId, {
-      action,
-      comments: action === 'approve' ? 'Quick approval from dashboard' : 'Quick rejection from dashboard'
-    })
-    
-    await approvalStore.fetchPendingApprovals()
-  } catch (error) {
-    console.error('Failed to process approval:', error)
-  } finally {
-    processing.value = false
-  }
-}
-
-const exportReport = async () => {
-  try {
-    await dashboardStore.exportReport({
-      period: dateRange.value,
-      format: 'pdf',
-      include_charts: true
-    })
-  } catch (error) {
-    console.error('Failed to export report:', error)
-  }
-}
-
-const getActivityIcon = (type: string) => {
-  const icons = {
-    'ticket_created': 'icon-plus-circle',
-    'ticket_updated': 'icon-edit',
-    'ticket_resolved': 'icon-check-circle',
-    'approval_requested': 'icon-clock',
-    'approval_approved': 'icon-check',
-    'approval_rejected': 'icon-x-circle',
-    'comment_added': 'icon-message-circle',
-    'file_uploaded': 'icon-upload'
-  }
-  return icons[type] || 'icon-activity'
-}
-
-const formatTimeAgo = (date: string) => {
+const formatTime = (timestamp: Date) => {
   const now = new Date()
-  const past = new Date(date)
-  const diffInMinutes = Math.floor((now.getTime() - past.getTime()) / (1000 * 60))
-  
-  if (diffInMinutes < 1) return 'Just now'
-  if (diffInMinutes < 60) return `${diffInMinutes}m ago`
-  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
-  return `${Math.floor(diffInMinutes / 1440)}d ago`
+  const diff = now.getTime() - timestamp.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (days > 0) return `${days}d ago`
+  if (hours > 0) return `${hours}h ago`
+  if (minutes > 0) return `${minutes}m ago`
+  return 'Just now'
 }
-
-const renderPriorityChart = () => {
-  if (!priorityChartCanvas.value) return
-  
-  const ctx = priorityChartCanvas.value.getContext('2d')
-  if (!ctx) return
-  
-  const total = priorityData.value.reduce((sum, item) => sum + item.value, 0)
-  if (total === 0) return
-  
-  const centerX = 150
-  const centerY = 100
-  const radius = 80
-  let currentAngle = 0
-  
-  ctx.clearRect(0, 0, 300, 200)
-  
-  priorityData.value.forEach(item => {
-    const sliceAngle = (item.value / total) * 2 * Math.PI
-    
-    ctx.beginPath()
-    ctx.moveTo(centerX, centerY)
-    ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle)
-    ctx.closePath()
-    ctx.fillStyle = item.color
-    ctx.fill()
-    
-    currentAngle += sliceAngle
-  })
-}
-
-// Lifecycle hooks
-onMounted(async () => {
-  await refreshDashboard()
-  refreshInterval = setInterval(refreshDashboard, 5 * 60 * 1000)
-})
-
-onUnmounted(() => {
-  if (refreshInterval) {
-    clearInterval(refreshInterval)
-  }
-})
 </script>
 
 <style scoped>
