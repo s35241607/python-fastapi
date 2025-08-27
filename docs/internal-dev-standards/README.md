@@ -96,6 +96,32 @@ This documentation set defines unified development standards for internal system
    - Branch 策略
    - 自動化測試
 
+### 微服務與事件驅動架構 Microservices & Event-Driven Architecture
+
+8. **[微服務架構規範](./microservices-architecture-standards.md)**
+   - 微服務設計原則與拆分策略
+   - 領域驅動設計 (DDD) 實踐
+   - API Gateway 設計 (Kong)
+   - 服務間通訊與斷路器模式
+   - 分散式事務管理 (Saga 模式)
+   - 服務監控與健康檢查
+
+9. **[事件驅動架構規範](./event-driven-architecture-standards.md)**
+   - Kafka 配置與管理
+   - 事件建模與設計
+   - 事件發布與訂閱模式
+   - 事件溯源 (Event Sourcing)
+   - CQRS 模式實作
+   - 事件處理保證與錯誤處理
+
+10. **[容器化與編排規範](./containerization-orchestration-standards.md)**
+    - Docker 微服務容器化策略
+    - Docker Compose 編排配置
+    - 環境變數與設定管理
+    - 網路隔離與安全配置
+    - 監控與日誌收集
+    - CI/CD 容器化整合
+
 ## 程式碼品質標準 Code Quality Standards
 
 ### 前端
