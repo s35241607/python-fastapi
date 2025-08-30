@@ -113,7 +113,7 @@ docker-compose down
    - `Vue.js: Debug` - 前端調試
    - `Launch Full Stack` - 同時調試前後端
 
-詳細調試說明請參考 [DEBUG_GUIDE.md](DEBUG_GUIDE.md)
+詳細調試說明請參考上述配置說明
 
 ## 🌐 服務端口
 
@@ -135,7 +135,6 @@ docker-compose down
 - **[🛠️ Development Guidelines](docs/DEVELOPMENT_GUIDELINES.md)** - 開發守則、編碼規範和工作流程
 - **[前端開發指南](frontend/README.md)** - Vue.js 前端開發詳細說明
 - **[後端開發指南](backend/README.md)** - FastAPI 後端開發詳細說明
-- **[調試指南](DEBUG_GUIDE.md)** - VS Code 調試配置說明
 
 ### 📋 技術規範
 - **[API 規範](docs/api-standards.md)** - RESTful API 設計規範
