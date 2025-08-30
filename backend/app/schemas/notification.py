@@ -18,7 +18,7 @@ class NotificationTemplate(BaseModel):
 
 class NotificationRequest(BaseModel):
     """Notification sending request"""
-    recipient_ids: List[int] = Field(..., min_items=1)
+    recipient_ids: List[int] = Field(..., min_length=1)
     template: NotificationTemplate
     channels: List[str] = Field(default=["email", "in_app"])
     priority: Priority = Priority.MEDIUM
